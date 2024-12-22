@@ -1,5 +1,6 @@
 #include "gatt_client.h"
 #include "wifi_manager.h"
+#include "http_server.h"
 #include <iostream>
 
 extern "C" void app_main(void) {
@@ -12,4 +13,7 @@ extern "C" void app_main(void) {
   }
 
   GattClient client;
+
+  WifiManager::AP::start();
+  HttpServer server;
 }

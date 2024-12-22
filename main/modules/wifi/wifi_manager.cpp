@@ -44,6 +44,41 @@ void WifiManager::STA::save_credentials(const std::string &ssid,
   nvs_close(nvs_handle);
 }
 
+bool WifiManager::STA::has_saved_credentials() {
+  nvs_handle_t nvs_handle;
+  esp_err_t err = nvs_open("storage", NVS_READONLY, &nvs_handle);
+  if (err != ESP_OK)
+    return false;
+
+  char ssid_buf[32], password_buf[64];
+  size_t ssid_len = sizeof(ssid_buf), password_len = sizeof(password_buf);
+
+  if (nvs_get_str(nvs_handle, WIFI_STA_SSID_KEY, ssid_buf, &ssid_len) ==
+          ESP_OK &&
+      nvs_get_str(nvs_handle, WIFI_STA_PASSWORD_KEY, password_buf,
+                  &password_len) == ESP_OK) {
+    nvs_close(nvs_handle);
+    return true;
+  }
+
+  nvs_close(nvs_handle);
+  return false;
+}
+
+bool WifiManager::STA::is_connected() {
+  wifi_ap_record_t ap_info;
+  if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+    return true;
+  }
+  return false;
+}
+
+bool WifiManager::STA::is_started() {
+  wifi_mode_t mode;
+  esp_wifi_get_mode(&mode);
+  return mode == WIFI_MODE_STA;
+}
+
 bool WifiManager::STA::start() {
   std::string ssid, password;
 
@@ -130,6 +165,12 @@ void WifiManager::AP::save_ssid(const std::string &ssid) {
   nvs_commit(nvs_handle);
 
   nvs_close(nvs_handle);
+}
+
+bool WifiManager::AP::is_started() {
+  wifi_mode_t mode;
+  esp_wifi_get_mode(&mode);
+  return mode == WIFI_MODE_AP;
 }
 
 void WifiManager::AP::start() {
