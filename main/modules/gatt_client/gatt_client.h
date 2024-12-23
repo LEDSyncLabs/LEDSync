@@ -19,6 +19,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <functional>
 
 #define GATTC_TAG "LEDSYNC_CLIENT"
 
@@ -28,7 +29,10 @@
 
 class GattClient {
 public:
+    using NotifyCallback = std::function<void(uint16_t handle, uint8_t value)>;
+
     static void create(const std::map<uint16_t, std::vector<uint16_t>>& services);
+    static NotifyCallback on_notify;
 
 private:
     static bool start_bt();

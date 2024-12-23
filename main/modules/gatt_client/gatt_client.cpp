@@ -1,8 +1,6 @@
 #include "gatt_client.h"
 
 
-gpio_num_t GattClient::LED_A = static_cast<gpio_num_t>(16);
-gpio_num_t GattClient::LED_B = static_cast<gpio_num_t>(5);
 const char* GattClient::remote_device_name = "LEDSYNC_SERVER";
 
 bool GattClient::connect = false;
@@ -10,6 +8,7 @@ bool GattClient::get_server = false;
 GattClient::gattc_profile_inst GattClient::gl_profile_tab[PROFILE_NUM];
 std::vector<GattClient::Service> GattClient::services = {};
 
+GattClient::NotifyCallback GattClient::on_notify = nullptr;
 
 esp_ble_scan_params_t GattClient::ble_scan_params = {
     .scan_type              = BLE_SCAN_TYPE_PASSIVE,
@@ -121,6 +120,7 @@ esp_bt_uuid_t GattClient::get_characteristic_by_handle(uint16_t handle) {
     return esp_bt_uuid_t();
 }
 
+// DONE
 void GattClient::create(const std::map<uint16_t, std::vector<uint16_t>>& service_data) {
     set_services(service_data);
     
@@ -135,21 +135,6 @@ void GattClient::create(const std::map<uint16_t, std::vector<uint16_t>>& service
         ESP_LOGE(GATTC_TAG, "Failed to start BT, stopping GattClient");
         return;
     }
-
-    // TODO move led outside this class
-    gpio_config_t io_conf_a = {
-        .pin_bit_mask = (1ULL << GPIO_NUM_16),
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE,
-    };
-    ESP_ERROR_CHECK(gpio_config(&io_conf_a));
-    gpio_set_level(LED_A, 0);
-
-    gpio_config_t io_conf_b = {.pin_bit_mask = (1ULL << LED_B), .mode = GPIO_MODE_OUTPUT};
-    ESP_ERROR_CHECK(gpio_config(&io_conf_b));
-    gpio_set_level(LED_B, 0);
 }
 
 void GattClient::gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param) {
@@ -354,26 +339,13 @@ void GattClient::gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gat
             uint16_t handle = p_data->notify.handle;
             ESP_LOGI(GATTC_TAG, "Notify handle is %x", handle);
 
-            gpio_num_t pin = static_cast<gpio_num_t>(-1);
-
-            if (handle == gl_profile_tab[PROFILE_A_APP_ID].char_handle) { //todo
-                pin = GattClient::LED_A;
-            } else {
-                pin = GattClient::LED_B;
-            }
-
-            if (pin == -1) {
-                ESP_LOGI(GATTC_TAG, "Unknown handle in notify event %x", handle);
-                break;
-            }
-
             uint8_t value = *((uint8_t *)p_data->notify.value);
-
-            esp_log_buffer_hex(GATTC_TAG, p_data->notify.value,
-                            p_data->notify.value_len);
+            esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
             ESP_LOGI(GATTC_TAG, "Converted value is %d", value);
 
-            gpio_set_level(static_cast<gpio_num_t>(pin), value);
+            if (on_notify) {
+                on_notify(handle, value);
+            }
 
             break;
         }
