@@ -21,11 +21,7 @@
 #include <map>
 #include <functional>
 
-#define GATTC_TAG "LEDSYNC_CLIENT"
-
 #define PROFILE_NUM 1
-#define PROFILE_A_APP_ID 0
-#define INVALID_HANDLE 0
 
 class GattClient {
 public:
@@ -76,7 +72,6 @@ private:
     };
 
     static gattc_profile_inst gl_profile_tab[PROFILE_NUM];
-
 };
 
 #endif // GATT_CLIENT_H
