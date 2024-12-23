@@ -2,7 +2,6 @@
 
 #define INVALID_HANDLE 0
 #define PROFILE_A_APP_ID 0
-#define GATTC_TAG "LEDSYNC_CLIENT"
 
 const char* GattClient::remote_device_name = "LEDSYNC_SERVER";
 

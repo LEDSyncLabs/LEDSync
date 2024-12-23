@@ -21,6 +21,7 @@
 #include <map>
 #include <functional>
 
+#define GATTC_TAG "LEDSYNC_CLIENT"
 #define PROFILE_NUM 1
 
 class GattClient {
