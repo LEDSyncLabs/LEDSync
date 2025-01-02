@@ -15,10 +15,11 @@ public:
   MQTTManager(const std::string &broker_uri, const std::string &username,
               const std::string &password);
   MQTTManager(const std::string &broker_uri);
-  ~MQTTManager() = default;
+  ~MQTTManager();
 
   std::string testStr = "uwu";
 
+  void connect();
   void start_connecting();
   bool is_connected() const;
   void disconnect();

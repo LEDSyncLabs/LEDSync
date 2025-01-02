@@ -28,14 +28,12 @@ extern "C" void app_main(void) {
                topic.c_str());
       });
 
-  mqtt_manager->start_connecting();
-
-  while (!mqtt_manager->is_connected()) {
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
+  mqtt_manager->connect();
 
   mqtt_manager->subscribe("my_topic");
 
   mqtt_manager->publish("my_topic", "Hello from ESP32");
+
+  // delete mqtt_manager;
 
 }

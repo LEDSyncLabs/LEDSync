@@ -20,19 +20,32 @@ MQTTManager::MQTTManager(const std::string &broker_uri) {
   mqtt_cfg.broker.address.uri = strdup(broker_uri.c_str());
 }
 
-void MQTTManager::start_connecting() {
-  if (client != nullptr) {
-    ESP_LOGI(TAG, "Already connected");
-    return;
-  }
-  printf("Connecting to %s\n", mqtt_cfg.broker.address.uri);
-  client = esp_mqtt_client_init(&mqtt_cfg);
-  esp_mqtt_client_start(client);
-  esp_mqtt_client_register_event(client, (esp_mqtt_event_id_t)ESP_EVENT_ANY_ID,
-                                 (esp_event_handler_t)event_handler, this);
+MQTTManager::~MQTTManager() {
+  printf("MQTT Manager deleted \n");
+  disconnect();
+}
 
-  esp_mqtt_client_register_event(client, (esp_mqtt_event_id_t)MQTT_EVENT_DATA,
-                                 (esp_event_handler_t)event_handler, this);
+void MQTTManager::connect() {
+  start_connecting();
+  
+  while (!is_connected()) {
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+void MQTTManager::start_connecting() {
+   if (client != nullptr) {
+      ESP_LOGI(TAG, "Already connected");
+      return;
+   }
+   printf("Connecting to %s\n", mqtt_cfg.broker.address.uri);
+   client = esp_mqtt_client_init(&mqtt_cfg);
+   esp_mqtt_client_start(client);
+   esp_mqtt_client_register_event(client, (esp_mqtt_event_id_t)ESP_EVENT_ANY_ID,
+                                  (esp_event_handler_t)event_handler, this);
+
+   esp_mqtt_client_register_event(client, (esp_mqtt_event_id_t)MQTT_EVENT_DATA,
+                                  (esp_event_handler_t)event_handler, this);
 }
 
 bool MQTTManager::is_connected() const {
@@ -47,6 +60,8 @@ void MQTTManager::disconnect() {
   esp_mqtt_client_stop(client);
   esp_mqtt_client_destroy(client);
   client = nullptr;
+
+  ESP_LOGI(TAG, "Client disconnected");
 }
 
 void MQTTManager::subscribe(const std::string &topic) {
