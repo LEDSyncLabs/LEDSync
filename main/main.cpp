@@ -13,35 +13,29 @@ extern "C" void app_main(void) {
     std::cout << "NVS got erased" << std::endl;
   }
 
-  // GattClient client;
-
-  // WifiManager::AP::start();
-  // HttpServer server;
 
   WifiManager::STA::save_credentials("SkyLink 49", "SkyBros49");
   WifiManager::STA::start();
 
-  MQTTManager mqtt_manager("mqtt://mqtt.eclipseprojects.io");
+  MQTTManager* mqtt_manager = new MQTTManager("mqtt://mqtt.eclipseprojects.io");
   while (!WifiManager::STA::is_connected()) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
-  // mqtt_manager.set_message_callback(
-  //     [](const std::string &topic, const std::string &message) {
-  //       printf("Received message: %s on topic: %s\n", message.c_str(),
-  //              topic.c_str());
-  //     });
-  mqtt_manager.set_message_callback(
+
+  mqtt_manager->set_message_callback(
       [](const std::string &topic, const std::string &message) {
         printf("Received message: %s on topic: %s\n", message.c_str(),
                topic.c_str());
       });
-  mqtt_manager.start_connecting();
 
-  while (!mqtt_manager.is_connected()) {
+  mqtt_manager->start_connecting();
+
+  while (!mqtt_manager->is_connected()) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 
-  mqtt_manager.subscribe("my_topic");
+  mqtt_manager->subscribe("my_topic");
 
-  mqtt_manager.publish("my_topic", "Hello from ESP32");
+  mqtt_manager->publish("my_topic", "Hello from ESP32");
+
 }

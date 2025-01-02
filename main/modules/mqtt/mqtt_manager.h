@@ -17,6 +17,8 @@ public:
   MQTTManager(const std::string &broker_uri);
   ~MQTTManager() = default;
 
+  std::string testStr = "uwu";
+
   void start_connecting();
   bool is_connected() const;
   void disconnect();

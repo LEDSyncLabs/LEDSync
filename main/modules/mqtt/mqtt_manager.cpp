@@ -30,6 +30,9 @@ void MQTTManager::start_connecting() {
   esp_mqtt_client_start(client);
   esp_mqtt_client_register_event(client, (esp_mqtt_event_id_t)ESP_EVENT_ANY_ID,
                                  (esp_event_handler_t)event_handler, this);
+
+  esp_mqtt_client_register_event(client, (esp_mqtt_event_id_t)MQTT_EVENT_DATA,
+                                 (esp_event_handler_t)event_handler, this);
 }
 
 bool MQTTManager::is_connected() const {
@@ -79,7 +82,6 @@ void MQTTManager::publish(const std::string &topic,
 
 void MQTTManager::set_message_callback(const MessageCallback &callback) {
   message_callback = callback;
-//   message_callback("test", "test");
 }
 
 void MQTTManager::event_handler(void *handler_args, esp_event_base_t base,
