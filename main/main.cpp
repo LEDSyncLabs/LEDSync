@@ -14,7 +14,7 @@ extern "C" void app_main(void) {
   }
 
 
-  WifiManager::STA::save_credentials("SkyLink 49", "SkyBros49");
+  WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
   WifiManager::STA::start();
 
   MQTTManager* mqtt_manager = new MQTTManager("mqtt://mqtt.eclipseprojects.io");
@@ -32,8 +32,13 @@ extern "C" void app_main(void) {
 
   mqtt_manager->subscribe("my_topic");
 
-  mqtt_manager->publish("my_topic", "Hello from ESP32");
+  
 
   // delete mqtt_manager;
+  while (true) {
+    std::cout << "Sending message" << std::endl;
+    mqtt_manager->publish("my_topic", "Hello from ESP32");
+    vTaskDelay(4000 / portTICK_PERIOD_MS);
+  }
 
 }
