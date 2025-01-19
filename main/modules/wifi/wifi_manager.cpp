@@ -8,6 +8,16 @@
 #include <string.h>
 #include <string>
 
+// Funkcja obsługi zdarzeń
+static void event_handler(void *arg, esp_event_base_t event_base,
+                          int32_t event_id, void *event_data) {
+  if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    printf("WiFi disconnected. Attempting to reconnect...\n");
+    esp_wifi_connect();
+    // WifiManager::STA::start();
+  }
+}
+
 bool WifiManager::STA::load_credentials(std::string &ssid,
                                         std::string &password) {
   nvs_handle_t nvs_handle;
@@ -94,6 +104,11 @@ bool WifiManager::STA::start() {
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   esp_wifi_init(&cfg);
 
+   // Rejestracja handlera zdarzeń
+  esp_event_handler_instance_t instance_any_id;
+  esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                                      &event_handler, NULL, &instance_any_id);
+
   wifi_config_t sta_config = {};
   strcpy(reinterpret_cast<char *>(sta_config.sta.ssid), ssid.c_str());
   strcpy(reinterpret_cast<char *>(sta_config.sta.password), password.c_str());
@@ -102,10 +117,7 @@ bool WifiManager::STA::start() {
   esp_wifi_set_config(WIFI_IF_STA, &sta_config);
   esp_wifi_start();
 
-  int retry_count = 0;
-  const int max_retries = 5;
-
-  while (retry_count < max_retries) {
+  while (true) {
     esp_err_t ret = esp_wifi_connect();
     if (ret == ESP_OK) {
       wifi_ap_record_t ap_info;
@@ -122,11 +134,10 @@ bool WifiManager::STA::start() {
       printf("Failed to connect to WiFi. Retrying...\n");
     }
 
-    retry_count++;
     vTaskDelay(pdMS_TO_TICKS(2000)); // Odczekaj 2 sekundy przed kolejną próbą
   }
 
-  printf("Failed to connect after %d retries.\n", max_retries);
+  // printf("Failed to connect after %d retries.\n", max_retries);
   printf("Press the 'change mode button' to enter AP mode while rebooting.\n");
 
   return false;

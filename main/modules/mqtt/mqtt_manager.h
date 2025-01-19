@@ -3,8 +3,9 @@
 #include <esp_log.h>
 #include <functional>
 #include <mqtt_client.h>
+#include <set>
+#include <queue>
 #include <string>
-
 
 class MQTTManager {
 public:
@@ -23,8 +24,8 @@ public:
   void start_connecting();
   bool is_connected() const;
   void disconnect();
-  void subscribe(const std::string &topic);
-  void unsubscribe(const std::string &topic);
+  void subscribe(const std::string &topic, bool withAddingToSet = true);
+  void unsubscribe(const std::string &topic, bool withRemovingFromSet = true);
   void publish(const std::string &topic, const std::string &message);
 
   void set_message_callback(const MessageCallback &callback);
@@ -55,6 +56,9 @@ private:
   };
   esp_mqtt_client_handle_t client = nullptr;
   bool connected = false;
+
+  std::set<std::string> subscribed_topics;
+  std::queue<std::pair<std::string, std::string>> messages;
 
   static void
   event_handler(void *handler_args, esp_event_base_t base, int32_t event_id,
