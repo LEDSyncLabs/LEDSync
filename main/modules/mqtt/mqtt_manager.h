@@ -3,8 +3,8 @@
 #include <esp_log.h>
 #include <functional>
 #include <mqtt_client.h>
-#include <set>
 #include <queue>
+#include <set>
 #include <string>
 
 class MQTTManager {
@@ -37,22 +37,19 @@ private:
           {
               .address =
                   {
-                      .uri = "mqtt://192.168.43.210",
+                      .uri = "mqtt://ledsync.spookyless.net",
                   },
           },
       // .broker.address.uri = "mqtt://mqtt.eclipseprojects.io",
       .credentials =
           {
-              .username = "weather_user",
-              .authentication =
-                  {
-                      .password = "zaq1@WSX",
-                  },
+              .username = "ll2sC8MEq3ZroudzfjNs",
           },
       .network =
           {
               .timeout_ms = 10000,
           },
+
   };
   esp_mqtt_client_handle_t client = nullptr;
   bool connected = false;

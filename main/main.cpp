@@ -17,7 +17,7 @@ extern "C" void app_main(void) {
   WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
   WifiManager::STA::start();
 
-  MQTTManager* mqtt_manager = new MQTTManager("mqtt://mqtt.eclipseprojects.io");
+  MQTTManager* mqtt_manager = new MQTTManager();
   while (!WifiManager::STA::is_connected()) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
@@ -30,14 +30,14 @@ extern "C" void app_main(void) {
 
   mqtt_manager->connect();
 
-  mqtt_manager->subscribe("my_topic");
+  mqtt_manager->subscribe("v1/devices/me/telemetry");
 
   
 
   // delete mqtt_manager;
   while (true) {
     std::cout << "Sending message" << std::endl;
-    mqtt_manager->publish("my_topic", "Hello from ESP32");
+    mqtt_manager->publish("v1/devices/me/telemetry", "{'temperature':25}");
     vTaskDelay(4000 / portTICK_PERIOD_MS);
   }
 
