@@ -1,8 +1,9 @@
-#include "gatt_client.h"
+#include "gatt_client.h" // TODO remove but include here dependencies for nvs_... and ESP_...
 #include "http_server.h"
 #include "mqtt_manager.h"
 #include "wifi_manager.h"
 #include <iostream>
+#include "gatt_server.h"
 
 extern "C" void app_main(void) {
   esp_err_t ret = nvs_flash_init();
@@ -13,6 +14,8 @@ extern "C" void app_main(void) {
     std::cout << "NVS got erased" << std::endl;
   }
 
+
+  start_gatt_server();
 
   WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
   WifiManager::STA::start();
