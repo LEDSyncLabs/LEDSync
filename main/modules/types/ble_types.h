@@ -3,6 +3,13 @@
 
 #include <cstdint>
 
+/**
+ * @struct RGB_LED
+ * @brief Represents an RGB LED with individual color components.
+ * 
+ * This structure holds the red, green, and blue color components of an RGB LED.
+ * Each component has value from 0 to 255.
+ */
 struct RGB_LED {
    uint8_t red;
    uint8_t green;
