@@ -322,13 +322,14 @@ void GattClient::gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gat
 
             uint16_t handle = p_data->notify.handle;
             ESP_LOGI(GATTC_TAG, "Notify handle is %x", handle);
-
-            uint8_t value = *((uint8_t *)p_data->notify.value);
-            esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
-            ESP_LOGI(GATTC_TAG, "Converted value is %d", value);
+            
+            // uint8_t value = *((uint8_t *)p_data->notify.value);
+            // esp_log_buffer_hex(GATTC_TAG, p_data->notify.value, p_data->notify.value_len);
+            // ESP_LOGI(GATTC_TAG, "Converted value is %d", value);
 
             if (on_notify) {
-                on_notify(handle, value);
+                // on_notify(handle, value);
+                on_notify(handle, p_data->notify.value);
             }
 
             break;
