@@ -17,49 +17,48 @@
 #include <stdio.h>
 #include <string.h>
 #include <memory>
-
+#include <vector>
+#include <map>
+#include <functional>
 
 #define GATTC_TAG "LEDSYNC_CLIENT"
-
-#define REMOTE_SERVICE_A_UUID 0xDEAD
-#define REMOTE_NOTIFY_CHAR_A_UUID 0xDE01
-
-#define REMOTE_SERVICE_B_UUID 0xBEEF
-#define REMOTE_NOTIFY_CHAR_B_UUID 0xBE01
-
 #define PROFILE_NUM 1
-#define PROFILE_A_APP_ID 0
-#define INVALID_HANDLE 0
-
 
 class GattClient {
 public:
-    GattClient();
+    using NotifyCallback = std::function<void(uint16_t handle, void* value)>;
+
+    static void create(const std::map<uint16_t, std::vector<uint16_t>>& services);
+    static NotifyCallback on_notify;
 
 private:
+    static bool start_bt();
+    static void set_services(const std::map<uint16_t, std::vector<uint16_t>>& service_data);
+    static esp_bt_uuid_t get_characteristic_by_handle(uint16_t handle);
+
+    struct Attribute {
+        esp_bt_uuid_t uuid;
+        uint16_t handle;
+    };
+
+    struct Service {
+        esp_bt_uuid_t uuid;
+        uint16_t handle;
+        std::vector<Attribute> characteristics;
+    };
+
+    static std::vector<Service> services;
+
     static gpio_num_t LED_A;
     static gpio_num_t LED_B;
-    static int connected_a;
     static bool connect;
     static bool get_server;
-    static esp_gattc_char_elem_t *char_elem_result_a;
-    static esp_gattc_char_elem_t *char_elem_result_b;
-    static esp_gattc_descr_elem_t *descr_elem_result_b;
-    static uint16_t handle_a;
-    static uint16_t handle_b;
-
     static const char* remote_device_name;
 
     static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param);
     static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
     static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 
-    static esp_bt_uuid_t remote_filter_service_a_uuid;
-    static esp_bt_uuid_t remote_filter_char_a_uuid;
-    static esp_bt_uuid_t notify_descr_a_uuid;
-    static esp_bt_uuid_t remote_filter_service_b_uuid;
-    static esp_bt_uuid_t remote_filter_char_b_uuid;
-    static esp_bt_uuid_t notify_descr_b_uuid;
     static esp_ble_scan_params_t ble_scan_params;
 
     struct gattc_profile_inst {
