@@ -26,7 +26,7 @@
 
 class GattClient {
 public:
-    using NotifyCallback = std::function<void(uint16_t handle, uint8_t value)>;
+    using NotifyCallback = std::function<void(uint16_t handle, void* value)>;
 
     static void create(const std::map<uint16_t, std::vector<uint16_t>>& services);
     static NotifyCallback on_notify;
