@@ -17,12 +17,5 @@ extern "C" void app_main(void) {
 
     Input::encoder.addListener(GPIO_NUM_22, GPIO_NUM_23, encoder_rotated);
 
-    Input::button.start();
-    Input::encoder.start();
-
-    // while(1){
-    //     int pin_value = gpio_get_level(GPIO_NUM_22);
-    //     ESP_LOGI("Main", "Pin [22] value: %d", pin_value);
-    //     vTaskDelay(100 / portTICK_PERIOD_MS);
-    // }
+    Input::start();
 }

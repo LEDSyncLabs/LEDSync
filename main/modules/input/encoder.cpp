@@ -4,7 +4,6 @@ QueueHandle_t Encoder::gpio_evt_queue = NULL;
 std::unordered_map<std::pair<gpio_num_t, gpio_num_t>, Encoder::Callback, pair_hash> Encoder::callbacks;
 volatile int64_t Encoder::last_interrupt_time = 0;
 
-const int Encoder::ESP_INTR_FLAG_DEFAULT;
 const int64_t Encoder::DEBOUNCE_THRESHOLD_US;
 
 Encoder::Encoder() {}
@@ -15,9 +14,13 @@ Encoder::~Encoder() {
 }
 
 void Encoder::start() {
+    if (gpio_evt_queue != NULL) {
+        ESP_LOGW("Encoder", "Encoder handler already started");        
+        return;
+    }
+
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     xTaskCreate(encoder_task, "encoder_task", 2048, NULL, 10, NULL);
-    // gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 
     for (const auto& pair : callbacks) {
         gpio_isr_handler_add(pair.first.first, gpio_isr_handler, (void*)pair.first.first);
@@ -26,6 +29,11 @@ void Encoder::start() {
 }
 
 void Encoder::addListener(gpio_num_t pinA, gpio_num_t pinB, Callback callback) {
+    if (gpio_evt_queue != NULL) {
+        ESP_LOGW("Button", "Button handler already started");        
+        return;
+    }
+
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << pinA) | (1ULL << pinB),
         .mode = GPIO_MODE_INPUT,

@@ -17,9 +17,10 @@ public:
     ~Button();
 
     void addListener(gpio_num_t pin, Callback callback);
-    void start();
 
 private:
+    void start();
+    
     static void IRAM_ATTR gpio_isr_handler(void* arg);
     static void button_task(void* arg);
 
@@ -27,6 +28,7 @@ private:
     static std::unordered_map<gpio_num_t, Callback> callbacks;
     static volatile int64_t last_interrupt_time;
 
-    static const int ESP_INTR_FLAG_DEFAULT = 0;
     static const int64_t DEBOUNCE_THRESHOLD_US = 500000;
+
+    friend class Input;
 };

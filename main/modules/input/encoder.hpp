@@ -27,9 +27,10 @@ public:
     ~Encoder();
 
     void addListener(gpio_num_t pinA, gpio_num_t pinB, Callback callback);
-    void start();
 
 private:
+    void start();
+    
     static void IRAM_ATTR gpio_isr_handler(void* arg);
     static void encoder_task(void* arg);
 
@@ -37,6 +38,7 @@ private:
     static std::unordered_map<std::pair<gpio_num_t, gpio_num_t>, Callback, pair_hash> callbacks;
     static volatile int64_t last_interrupt_time;
 
-    static const int ESP_INTR_FLAG_DEFAULT = 0;
     static const int64_t DEBOUNCE_THRESHOLD_US = 75000;
+
+    friend class Input;
 };

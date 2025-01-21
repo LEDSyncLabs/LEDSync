@@ -4,7 +4,6 @@ QueueHandle_t Button::gpio_evt_queue = NULL;
 std::unordered_map<gpio_num_t, Button::Callback> Button::callbacks;
 volatile int64_t Button::last_interrupt_time = 0;
 
-const int Button::ESP_INTR_FLAG_DEFAULT;
 const int64_t Button::DEBOUNCE_THRESHOLD_US;
 
 Button::Button() {}
@@ -15,9 +14,13 @@ Button::~Button() {
 }
 
 void Button::start() {
+    if (gpio_evt_queue != NULL) {
+        ESP_LOGW("Button", "Button handler already started");        
+        return;
+    }
+
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     xTaskCreate(button_task, "button_task", 2048, NULL, 10, NULL);
-    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
 
     for (const auto& pair : callbacks) {
         gpio_isr_handler_add(pair.first, gpio_isr_handler, (void*)pair.first);
@@ -25,6 +28,11 @@ void Button::start() {
 }
 
 void Button::addListener(gpio_num_t pin, Callback callback) {
+    if (gpio_evt_queue != NULL) {
+        ESP_LOGW("Button", "Button handler already started");        
+        return;
+    }
+
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << pin),
         .mode = GPIO_MODE_INPUT,
