@@ -3,12 +3,14 @@
 #include "button.hpp"
 #include "encoder.hpp"
 #include "potentiometer.hpp"
+#include "ir.hpp"
 
 class Input {
 public:
     static Button button;
     static Encoder encoder;
     static Potentiometer potentiometer;
+    static IR ir;
 
     static void start();
 private:
