@@ -4,22 +4,6 @@
 gpio_num_t LED_A = GPIO_NUM_16;
 gpio_num_t LED_B = GPIO_NUM_5;
 
-std::map<uint16_t, std::function<void(void *value)>> commandMap = {
-    {0xDE01, changeLeds},
-    {0xDE02, changeBrightness},
-    {0xBE01, changeLeds},
-    {0xBE02, changeBrightness},
-};
-
-void handle_notification(uint16_t handle, void *value) {
-  auto it = commandMap.find(handle);
-  if (it != commandMap.end()) {
-    it->second(value);
-  } else {
-    ESP_LOGI(GATTC_TAG, "Unknown handle in notify event %x", handle);
-  }
-}
-
 void init_leds() {
   gpio_config_t io_conf_a = {
       .pin_bit_mask = (1ULL << GPIO_NUM_16),
@@ -49,6 +33,22 @@ void changeBrightness(void *value) {
   brightness *bright = (brightness *)value;
 
   printf("nice brightness: %f\n", bright->value);
+}
+
+std::map<uint16_t, std::function<void(void *value)>> commandMap = {
+    {0xDE01, changeLeds},
+    {0xDE02, changeBrightness},
+    {0xBE01, changeLeds},
+    {0xBE02, changeBrightness},
+};
+
+void handle_notification(uint16_t handle, void *value) {
+  auto it = commandMap.find(handle);
+  if (it != commandMap.end()) {
+    it->second(value);
+  } else {
+    ESP_LOGI(GATTC_TAG, "Unknown handle in notify event %x", handle);
+  }
 }
 
 extern "C" void app_main(void) {

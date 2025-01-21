@@ -1,62 +1,138 @@
+#include "cJSON.h"
 #include "gatt_client.h" // TODO remove but include here dependencies for nvs_... and ESP_...
+#include "gatt_server.h"
 #include "http_server.h"
 #include "mqtt_manager.h"
+#include "persistent_storage.h"
+#include "utils.h"
 #include "wifi_manager.h"
+#include <esp_timer.h>
 #include <iostream>
-#include "gatt_server.h"
 
-gpio_num_t LED_A = GPIO_NUM_16;
-gpio_num_t LED_B = GPIO_NUM_5;
 
-std::map<uint16_t, std::function<void(void *value)>> commandMap = {
-    {0xDE01, changeLeds},
-    {0xDE02, changeBrightness},
-    {0xBE01, changeLeds},
-    {0xBE02, changeBrightness},
-};
+#define expireTime 7 * 24 * 60 * 60 * 1000 // 7 days
 
-void handle_notification(uint16_t handle, void *value) {
-  auto it = commandMap.find(handle);
-  if (it != commandMap.end()) {
-    it->second(value);
-  } else {
-    ESP_LOGI(GATTC_TAG, "Unknown handle in notify event %x", handle);
+void setClaim() {
+  PersistentStorage *storage = new PersistentStorage("MQTT");
+
+  std::string secretKey = Utils::random_string(10);
+  std::string accessToken = storage->getValue("accessToken");
+
+  MQTTManager *mqtt_manager = new MQTTManager(MQTTManager::url, accessToken);
+  mqtt_manager->connect();
+
+  std::string message = R"rawliteral(
+      {
+        "secretKey":"{1}", 
+        "durationMs":{2}
+        }
+    )rawliteral";
+
+  Utils::replace(message, "{1}", secretKey);
+  Utils::replace(message, "{2}", std::to_string(expireTime));
+
+  mqtt_manager->publish("v1/devices/me/claim", message);
+  printf("Claim message sent\n");
+  printf("Secret key: %s\n", secretKey.c_str());
+
+  storage->saveValue("secretKey", secretKey);
+  delete storage;
+  delete mqtt_manager;
+}
+
+void checkIfDeviceIsRegistered() {
+  PersistentStorage *storage = new PersistentStorage("MQTT");
+  std::string deviceName = storage->getValue("deviceName");
+  std::string secretKey = storage->getValue("secretKey");
+  std::string accessToken = storage->getValue("accessToken");
+
+  printf("Device name: %s\n", deviceName.c_str());
+  printf("Secret key: %s\n", secretKey.c_str());
+  printf("Access token: %s\n", accessToken.c_str());
+
+  if (deviceName == "" || accessToken == "") {
+    MQTTManager *mqtt_manager = new MQTTManager(MQTTManager::url, "provision");
+    mqtt_manager->connect();
+
+    deviceName = Utils::random_string(10);
+    storage->saveValue("deviceName", deviceName);
+
+    printf("Device name: %s\n", deviceName.c_str());
+    printf("Secret key: %s\n", secretKey.c_str());
+    printf("Access token: %s\n", accessToken.c_str());
+
+    mqtt_manager->subscribe(
+        "/provision/response", [mqtt_manager](const std::string &message) {
+          std::cout << "Received provision response: " << message << std::endl;
+
+          // Parsowanie JSON za pomocą cJSON
+          cJSON *root = cJSON_Parse(message.c_str());
+          if (root == nullptr) {
+            std::cerr << "Failed to parse JSON" << std::endl;
+            return;
+          }
+
+          // Pobranie pola "credentialsValue"
+          cJSON *credentialsValue =
+              cJSON_GetObjectItem(root, "credentialsValue");
+          if (credentialsValue != nullptr && cJSON_IsString(credentialsValue)) {
+            std::string token = credentialsValue->valuestring;
+            std::cout << "Extracted credentials value: " << token << std::endl;
+
+            // Możesz tutaj zapisać token do pamięci trwałej np. NVS
+            PersistentStorage *storage = new PersistentStorage("MQTT");
+            storage->saveValue("accessToken", token);
+            delete storage;
+
+            mqtt_manager->unsubscribe("/provision/response");
+
+            esp_timer_handle_t shutdown_timer;
+            esp_timer_create_args_t timer_args = {
+                .callback =
+                    [](void *arg) {
+                      MQTTManager *mqtt = static_cast<MQTTManager *>(arg);
+                      delete mqtt;
+                      printf("MQTT client deleted safely\n");
+                    },
+                .arg = mqtt_manager,
+                .dispatch_method = ESP_TIMER_TASK,
+                .name = "mqtt_shutdown"};
+            esp_timer_create(&timer_args, &shutdown_timer);
+            esp_timer_start_once(shutdown_timer, 500000); // 500ms delay
+
+            printf("Device name: %s\n",
+                   storage->getValue("deviceName").c_str());
+
+            setClaim();
+          } else {
+            std::cerr << "Error: credentialsValue not found or not a string"
+                      << std::endl;
+          }
+
+          cJSON_Delete(root);
+        });
+
+    std::string message = R"rawliteral(
+      {
+        'deviceName':'{1}',
+        'provisionDeviceKey':'hhnivi92xm3c8yek45ct',
+        'provisionDeviceSecret':'an2u0xl5xa95i5do86hb'
+      }
+    )rawliteral";
+
+    Utils::replace(message, "{1}", deviceName);
+
+    mqtt_manager->publish("/provision/request", message);
+  } else if (secretKey == "") {
+    setClaim();
   }
-}
 
-void init_leds() {
-  gpio_config_t io_conf_a = {
-      .pin_bit_mask = (1ULL << GPIO_NUM_16),
-      .mode = GPIO_MODE_OUTPUT,
-      .pull_up_en = GPIO_PULLUP_DISABLE,
-      .pull_down_en = GPIO_PULLDOWN_DISABLE,
-      .intr_type = GPIO_INTR_DISABLE,
-  };
-  ESP_ERROR_CHECK(gpio_config(&io_conf_a));
-  gpio_set_level(LED_A, 0);
-
-  gpio_config_t io_conf_b = {.pin_bit_mask = (1ULL << LED_B),
-                             .mode = GPIO_MODE_OUTPUT};
-  ESP_ERROR_CHECK(gpio_config(&io_conf_b));
-  gpio_set_level(LED_B, 0);
-}
-
-void changeLeds(void *value) {
-  RGB_LED *led = (RGB_LED *)value;
-
-  printf("nice red: %d\n", led->red);
-  printf("nice green: %d\n", led->green);
-  printf("nice blue: %d\n", led->blue);
-}
-
-void changeBrightness(void *value) {
-  brightness *bright = (brightness *)value;
-
-  printf("nice brightness: %f\n", bright->value);
+  delete storage;
 }
 
 extern "C" void app_main(void) {
   esp_err_t ret = nvs_flash_init();
+
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
     nvs_flash_erase();
@@ -64,34 +140,27 @@ extern "C" void app_main(void) {
     std::cout << "NVS got erased" << std::endl;
   }
 
-
-  start_gatt_server();
-
   WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
   WifiManager::STA::start();
 
-  MQTTManager* mqtt_manager = new MQTTManager();
-  while (!WifiManager::STA::is_connected()) {
-    vTaskDelay(10 / portTICK_PERIOD_MS);
-  }
+  checkIfDeviceIsRegistered();
 
-  mqtt_manager->set_message_callback(
-      [](const std::string &topic, const std::string &message) {
-        printf("Received message: %s on topic: %s\n", message.c_str(),
-               topic.c_str());
-      });
-
-  mqtt_manager->connect();
-
-  mqtt_manager->subscribe("v1/devices/me/telemetry");
-
-  
-
-  // delete mqtt_manager;
+  PersistentStorage *storage = new PersistentStorage("MQTT");
   while (true) {
-    std::cout << "Sending message" << std::endl;
-    mqtt_manager->publish("v1/devices/me/telemetry", "{'temperature':25}");
     vTaskDelay(4000 / portTICK_PERIOD_MS);
+
+    std::string deviceName = storage->getValue("deviceName");
+    std::string secretKey = storage->getValue("secretKey");
+    std::string accessToken = storage->getValue("accessToken");
+
+    if(deviceName != "" && secretKey != "" && accessToken != "") {
+      break;
+    }
   }
 
+  WifiManager::STA::stop();
+  WifiManager::AP::save_ssid("LEDSync Setup");
+  WifiManager::AP::start();
+
+  HttpServer *http_server = new HttpServer();
 }
