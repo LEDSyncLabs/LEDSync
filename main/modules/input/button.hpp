@@ -9,12 +9,12 @@
 #include <functional>
 #include <unordered_map>
 
-class Input {
+class Button {
 public:
     using Callback = std::function<void(int)>;
 
-    Input();
-    ~Input();
+    Button();
+    ~Button();
 
     void addListener(gpio_num_t pin, Callback callback);
     void start();
@@ -24,7 +24,7 @@ private:
     static void button_task(void* arg);
 
     static QueueHandle_t gpio_evt_queue;
-    static std::unordered_map<int, Callback> callbacks;
+    static std::unordered_map<gpio_num_t, Callback> callbacks;
     static volatile int64_t last_interrupt_time;
 
     static const int ESP_INTR_FLAG_DEFAULT = 0;
