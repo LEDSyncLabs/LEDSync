@@ -9,7 +9,6 @@ const int64_t Button::DEBOUNCE_THRESHOLD_US;
 Button::Button() {}
 
 Button::~Button() {
-    gpio_uninstall_isr_service();
     vQueueDelete(gpio_evt_queue);
 }
 

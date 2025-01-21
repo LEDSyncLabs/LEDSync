@@ -9,7 +9,6 @@ const int64_t Encoder::DEBOUNCE_THRESHOLD_US;
 Encoder::Encoder() {}
 
 Encoder::~Encoder() {
-    gpio_uninstall_isr_service();
     vQueueDelete(gpio_evt_queue);
 }
 

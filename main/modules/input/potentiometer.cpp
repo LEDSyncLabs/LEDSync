@@ -27,8 +27,6 @@ void Potentiometer::addListener(adc2_channel_t channel, Callback callback, int i
         return;
     }
 
-    adc2_config_channel_atten(channel, ADC_ATTEN_DB_11);
-    
     TickType_t delay = pdMS_TO_TICKS(intervalMs);
     listeners[channel] = {callback, delay};
 }
@@ -44,10 +42,14 @@ int Potentiometer::read(adc2_channel_t channel) {
 }
 
 void Potentiometer::potentiometer_task(void* arg) {
-    adc2_channel_t channel;
     while (1) {
+        if (listeners.empty()) {
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            continue;
+        }
+
         for (const auto& pair : listeners) {
-            channel = pair.first;
+            adc2_channel_t channel = pair.first;
             int value;
             if (adc2_get_raw(channel, ADC_WIDTH_BIT_12, &value) == ESP_OK) {
                 // ESP_LOGI("Potentiometer", "Channel [%d] value: %d", channel, value);
