@@ -26,8 +26,7 @@ public:
     Encoder();
     ~Encoder();
 
-    void addListener(gpio_num_t pin, Callback callback);
-    void addRotationListener(gpio_num_t pinA, gpio_num_t pinB, Callback callback);
+    void addListener(gpio_num_t pinA, gpio_num_t pinB, Callback callback);
     void start();
 
 private:
@@ -35,10 +34,9 @@ private:
     static void encoder_task(void* arg);
 
     static QueueHandle_t gpio_evt_queue;
-    static std::unordered_map<gpio_num_t, Callback> callbacks;
-    static std::unordered_map<std::pair<gpio_num_t, gpio_num_t>, Callback, pair_hash> rotation_callbacks;
+    static std::unordered_map<std::pair<gpio_num_t, gpio_num_t>, Callback, pair_hash> callbacks;
     static volatile int64_t last_interrupt_time;
 
     static const int ESP_INTR_FLAG_DEFAULT = 0;
-    static const int64_t DEBOUNCE_THRESHOLD_US = 500000;
+    static const int64_t DEBOUNCE_THRESHOLD_US = 75000;
 };
