@@ -9,6 +9,7 @@ idf_component_register(
         "modules/mqtt/mqtt_manager.cpp" 
         "modules/input/input.cpp"
         "modules/input/button.cpp"
+        "modules/input/encoder.cpp"
     INCLUDE_DIRS 
         "." 
         "modules/gatt_client" 
