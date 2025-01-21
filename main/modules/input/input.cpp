@@ -2,6 +2,7 @@
 
 Button Input::button;
 Encoder Input::encoder;
+Potentiometer Input::potentiometer;
 
 bool Input::started = false;
 
@@ -16,4 +17,5 @@ void Input::start() {
 
     button.start();
     encoder.start();
+    potentiometer.start();
 }

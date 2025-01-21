@@ -29,7 +29,7 @@ void Button::start() {
 
 void Button::addListener(gpio_num_t pin, Callback callback) {
     if (gpio_evt_queue != NULL) {
-        ESP_LOGW("Button", "Button handler already started");        
+        ESP_LOGW("Button", "Cannot add listener after starting the handler");        
         return;
     }
 

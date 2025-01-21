@@ -10,6 +10,7 @@ idf_component_register(
         "modules/input/input.cpp"
         "modules/input/button.cpp"
         "modules/input/encoder.cpp"
+        "modules/input/potentiometer.cpp"
     INCLUDE_DIRS 
         "." 
         "modules/gatt_client" 

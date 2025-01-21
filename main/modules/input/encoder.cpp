@@ -30,7 +30,7 @@ void Encoder::start() {
 
 void Encoder::addListener(gpio_num_t pinA, gpio_num_t pinB, Callback callback) {
     if (gpio_evt_queue != NULL) {
-        ESP_LOGW("Button", "Button handler already started");        
+        ESP_LOGW("Button", "Cannot add listener after starting the handler");        
         return;
     }
 
