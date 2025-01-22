@@ -8,9 +8,14 @@
 #include "wifi_manager.h"
 #include <esp_timer.h>
 #include <iostream>
+#include "lcd_management.h"
+#include "button.hpp"
 
 
 #define expireTime 7 * 24 * 60 * 60 * 1000 // 7 days
+
+
+
 
 
 extern "C" void app_main(void) {
@@ -23,7 +28,30 @@ extern "C" void app_main(void) {
     std::cout << "NVS got erased" << std::endl;
   }
 
-  WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
-  WifiManager::STA::start();
+  int i = 0;  
+  LcdManagement::drawWifiInfoWindow();
 
+  Button* button = new Button();  
+
+  button->addListener(GPIO_NUM_1, [&i](int state) {
+    i--;    
+
+    if(i%2 == 0){
+      LcdManagement::drawDeviceInfoWindow();
+    } else {
+      LcdManagement::drawWifiInfoWindow();
+    }
+  });
+
+  button->addListener(GPIO_NUM_2, [&i](int state) {
+    i++;
+
+    if(i%2 == 0){
+      LcdManagement::drawDeviceInfoWindow();
+    } else {
+      LcdManagement::drawWifiInfoWindow();
+    }
+  });
 }
+
+

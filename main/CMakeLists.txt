@@ -13,6 +13,9 @@ idf_component_register(
         "modules/input/potentiometer.cpp"
         "modules/persistent_storage/persistent_storage.cpp"
         "modules/input/ir.cpp"
+        "modules/lcd/lcd.cpp"
+        "management/registering_device_management/registering_device_management.cpp"
+        "management/lcd_management/lcd_management.cpp"
     INCLUDE_DIRS 
         "." 
         "modules/gatt_client" 
@@ -23,4 +26,7 @@ idf_component_register(
         "modules/mqtt" 
         "modules/input"
         "modules/persistent_storage"
+        "modules/lcd"
+        "management/registering_device_management"
+        "management/lcd_management"
 )
