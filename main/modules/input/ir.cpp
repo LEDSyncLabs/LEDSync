@@ -18,10 +18,15 @@
 
 QueueHandle_t IR::gpio_evt_queue = NULL;
 std::vector<IR::Listener> IR::listeners;
-rmt_symbol_word_t IR::raw_symbols[64]; // Buffer for RMT symbols
+IR::Callback IR::default_callback = NULL;
+rmt_symbol_word_t IR::raw_symbols[64];
 uint16_t IR::s_nec_code_address = 0;
 uint16_t IR::s_nec_code_command = 0;
 rmt_channel_handle_t IR::rx_channel = NULL;
+const rmt_receive_config_t IR::receive_config = {
+    .signal_range_min_ns = 1250,
+    .signal_range_max_ns = 12000000,
+};
 
 IR::IR() {}
 
@@ -51,16 +56,16 @@ void IR::start() {
     };
     ESP_ERROR_CHECK(rmt_rx_register_event_callbacks(rx_channel, &cbs, gpio_evt_queue));
 
-    rmt_receive_config_t receive_config = {
-        .signal_range_min_ns = 1250,
-        .signal_range_max_ns = 12000000,
-    };
     ESP_ERROR_CHECK(rmt_enable(rx_channel));
     ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
 }
 
 void IR::addListener(uint16_t command, Callback callback) {
     listeners.push_back({command, callback});
+}
+
+void IR::addListener(Callback callback) {
+    default_callback = callback;
 }
 
 bool IR::rmt_rx_done_callback(rmt_channel_handle_t channel, const rmt_rx_done_event_data_t *edata, void *user_data) {
@@ -76,16 +81,15 @@ void IR::ir_task(void* arg) {
     while (1) {
         if (xQueueReceive(gpio_evt_queue, &rx_data, portMAX_DELAY)) {
             ir_instance->parse_nec_frame(rx_data.received_symbols, rx_data.num_symbols);
+            if (default_callback) {
+                default_callback(s_nec_code_command);
+            }
             for (const auto& listener : listeners) {
                 if (listener.command == s_nec_code_command) {
                     listener.callback(s_nec_code_command);
                 }
             }
-            // Call rmt_receive again to continue receiving signals
-            rmt_receive_config_t receive_config = {
-                .signal_range_min_ns = 1250,
-                .signal_range_max_ns = 12000000,
-            };
+            // Wait for next command
             ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols), &receive_config));
         }
     }
@@ -136,7 +140,6 @@ bool IR::nec_parse_frame(rmt_symbol_word_t *rmt_nec_symbols) {
         }
         cur++;
     }
-    // save address and command
     s_nec_code_address = address;
     s_nec_code_command = command;
     return true;
@@ -147,27 +150,28 @@ bool IR::nec_parse_frame_repeat(rmt_symbol_word_t *rmt_nec_symbols) {
            nec_check_in_range(rmt_nec_symbols->duration1, NEC_REPEAT_CODE_DURATION_1);
 }
 
+
 void IR::parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols, size_t symbol_num) {
+    bool frame_parsed = false;
+
+    if (symbol_num == 34) {
+        frame_parsed = nec_parse_frame(rmt_nec_symbols);
+    } else if (symbol_num == 2) {
+        frame_parsed = nec_parse_frame_repeat(rmt_nec_symbols);
+    }
+
+    #ifdef DEBUG_FRAME
     printf("NEC frame start---\r\n");
     for (size_t i = 0; i < symbol_num; i++) {
         printf("{%d:%d},{%d:%d}\r\n", rmt_nec_symbols[i].level0, rmt_nec_symbols[i].duration0,
                rmt_nec_symbols[i].level1, rmt_nec_symbols[i].duration1);
     }
     printf("---NEC frame end: ");
-    // decode RMT symbols
-    switch (symbol_num) {
-    case 34: // NEC normal frame
-        if (nec_parse_frame(rmt_nec_symbols)) {
-            printf("Address=%04X, Command=%04X\r\n\r\n", s_nec_code_address, s_nec_code_command);
-        }
-        break;
-    case 2: // NEC repeat frame
-        if (nec_parse_frame_repeat(rmt_nec_symbols)) {
-            printf("Address=%04X, Command=%04X, repeat\r\n\r\n", s_nec_code_address, s_nec_code_command);
-        }
-        break;
-    default:
+
+    if (frame_parsed) {
+        printf("Address=%04X, Command=%04X\r\n\r\n", s_nec_code_address, s_nec_code_command);
+    } else {
         printf("Unknown NEC frame\r\n\r\n");
-        break;
     }
+    #endif
 }

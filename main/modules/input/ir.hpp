@@ -16,9 +16,11 @@ public:
     ~IR();
 
     void addListener(uint16_t command, Callback callback);
-    void start();
+    void addListener(Callback callback);
 
 private:
+    void start();
+
     struct Listener {
         uint16_t command;
         Callback callback;
@@ -36,8 +38,12 @@ private:
 
     static QueueHandle_t gpio_evt_queue;
     static std::vector<Listener> listeners;
-    static rmt_symbol_word_t raw_symbols[64]; // Buffer for RMT symbols
+    static Callback default_callback;
+    static rmt_symbol_word_t raw_symbols[64];
     static uint16_t s_nec_code_address;
     static uint16_t s_nec_code_command;
     static rmt_channel_handle_t rx_channel;
+    static const rmt_receive_config_t receive_config;
+
+    friend class Input;
 };
