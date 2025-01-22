@@ -6,60 +6,37 @@
 #include <queue>
 #include <set>
 #include <string>
+#include <unordered_map>
 
 class MQTTManager {
 public:
-  using MessageCallback =
-      std::function<void(const std::string &topic, const std::string &message)>;
+  const static std::string url;
+  using MessageCallback = std::function<void(const std::string &message)>;
 
   MQTTManager();
-  MQTTManager(const std::string &broker_uri, const std::string &username,
-              const std::string &password);
+  MQTTManager(const std::string &broker_uri, const std::string &username);
   MQTTManager(const std::string &broker_uri);
   ~MQTTManager();
-
-  std::string testStr = "uwu";
 
   void connect();
   void start_connecting();
   bool is_connected() const;
   void disconnect();
-  void subscribe(const std::string &topic, bool withAddingToSet = true);
-  void unsubscribe(const std::string &topic, bool withRemovingFromSet = true);
+  
+  void subscribe(const std::string &topic, MessageCallback callback);
+  void unsubscribe(const std::string &topic);
+
   void publish(const std::string &topic, const std::string &message);
 
-  void set_message_callback(const MessageCallback &callback);
-  MessageCallback message_callback = nullptr;
-
 private:
-  esp_mqtt_client_config_t mqtt_cfg = {
-      .broker =
-          {
-              .address =
-                  {
-                      .uri = "mqtt://ledsync.spookyless.net",
-                  },
-          },
-      // .broker.address.uri = "mqtt://mqtt.eclipseprojects.io",
-      .credentials =
-          {
-              .username = "ll2sC8MEq3ZroudzfjNs",
-          },
-      .network =
-          {
-              .timeout_ms = 10000,
-          },
-
-  };
+  esp_mqtt_client_config_t mqtt_cfg = {};
   esp_mqtt_client_handle_t client = nullptr;
   bool connected = false;
 
-  std::set<std::string> subscribed_topics;
-  std::queue<std::pair<std::string, std::string>> messages;
+  std::unordered_map<std::string, MessageCallback> topic_callbacks;
 
-  static void
-  event_handler(void *handler_args, esp_event_base_t base, int32_t event_id,
-                esp_mqtt_event_handle_t event_data); // std::string broker_;
+  static void event_handler(void *handler_args, esp_event_base_t base, int32_t event_id,
+                            esp_mqtt_event_handle_t event_data);
 };
 
 #endif // MQTT_MANAGER_H

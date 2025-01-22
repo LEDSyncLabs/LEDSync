@@ -11,6 +11,7 @@ idf_component_register(
         "modules/input/button.cpp"
         "modules/input/encoder.cpp"
         "modules/input/potentiometer.cpp"
+        "modules/persistent_storage/persistent_storage.cpp"
     INCLUDE_DIRS 
         "." 
         "modules/gatt_client" 
@@ -20,4 +21,5 @@ idf_component_register(
         "modules/http_server" 
         "modules/mqtt" 
         "modules/input"
+        "modules/persistent_storage"
 )
