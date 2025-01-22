@@ -12,6 +12,7 @@ idf_component_register(
         "modules/input/encoder.cpp"
         "modules/input/potentiometer.cpp"
         "modules/input/ir.cpp"
+        "modules/input/ir_nec_encoder.c"
     INCLUDE_DIRS 
         "." 
         "modules/gatt_client" 
