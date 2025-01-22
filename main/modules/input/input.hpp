@@ -10,7 +10,7 @@ public:
     static Button button;
     static Encoder encoder;
     static Potentiometer potentiometer;
-    // static IR ir;
+    static IR ir;
 
     static void start();
 private:

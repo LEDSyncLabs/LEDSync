@@ -3,7 +3,7 @@
 Button Input::button;
 Encoder Input::encoder;
 Potentiometer Input::potentiometer;
-// IR Input::ir;
+IR Input::ir;
 
 bool Input::started = false;
 
@@ -19,5 +19,5 @@ void Input::start() {
     button.start();
     encoder.start();
     potentiometer.start();
-    // ir.start();
+    ir.start();
 }
