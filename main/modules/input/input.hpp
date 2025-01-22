@@ -12,6 +12,7 @@ public:
     static Potentiometer potentiometer;
     static IR ir;
 
+    /// @brief Start all input handlers after adding listeners
     static void start();
 private:
     static const int ESP_INTR_FLAG_DEFAULT = 0;

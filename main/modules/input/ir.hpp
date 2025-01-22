@@ -15,7 +15,13 @@ public:
     IR();
     ~IR();
 
+    /// @brief Add listener for specific command
+    /// @param command The command to listen for
+    /// @param callback The callback function to be called when the command is received
     void addListener(uint16_t command, Callback callback);
+
+    /// @brief Add listener for all commands
+    /// @param callback The callback function to be called for any command
     void addListener(Callback callback);
 
 private:

@@ -69,9 +69,9 @@ void Encoder::encoder_task(void* arg) {
                     int direction = 0;
 
                     if (stateA == stateB) {
-                        direction = (io_num == pinA) ? -1 : 1; // Counter-clockwise if pinA changes, Clockwise if pinB changes
-                    } else {
                         direction = (io_num == pinA) ? 1 : -1; // Clockwise if pinA changes, Counter-clockwise if pinB changes
+                    } else {
+                        direction = (io_num == pinA) ? -1 : 1; // Counter-clockwise if pinA changes, Clockwise if pinB changes
                     }
 
                     // ESP_LOGI("Encoder", "Pins [%d, %d] rotated, direction: %d", pinA, pinB, direction);

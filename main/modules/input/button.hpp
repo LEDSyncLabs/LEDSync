@@ -16,6 +16,9 @@ public:
     Button();
     ~Button();
 
+    /// @brief Add listener for button press
+    /// @param pin The pin to listen for
+    /// @param callback The callback function to be called when the button is pressed. Passed 1 for pressed, 0 for released
     void addListener(gpio_num_t pin, Callback callback);
 
 private:
