@@ -1,10 +1,28 @@
-#include "lcd_management.h"
-#include "lcd.h"
+#include "menu/menu.h"
+#include "lcd/lcd.h"
 #include <iostream>
-#include "persistent_storage.h" 
-#include "wifi_manager.h"
+#include "persistent_storage/persistent_storage.h" 
+#include "wifi/wifi_manager.h"
+#include "input/input.hpp"
+#include "menu.h"
 
-void LcdManagement::drawDeviceInfoWindow() {
+
+#define SCREEN_PIN_LEFT GPIO_NUM_21
+#define SCREEN_PIN_RIGHT GPIO_NUM_22
+
+
+Menu::Menu() {
+  drawWifiInfoWindow();  
+
+ 
+   
+  Input::encoder.addListener(SCREEN_PIN_LEFT, SCREEN_PIN_RIGHT, std::bind(&Menu::changeScreen, this, std::placeholders::_1));  
+
+  Input::start();
+
+}
+
+void Menu::drawDeviceInfoWindow() {
    PersistentStorage storage("MQTT");
 
    std::string deviceName = storage.getValue("deviceName");
@@ -28,7 +46,7 @@ void LcdManagement::drawDeviceInfoWindow() {
    lcd_display_update();
 }
 
-void LcdManagement::drawWifiInfoWindow() {
+void Menu::drawWifiInfoWindow() {
    std::string ssid;
    WifiManager::AP::load_ssid(ssid);
   
@@ -37,4 +55,11 @@ void LcdManagement::drawWifiInfoWindow() {
    lcd_draw_text(6, 26, const_cast<char*>(("SSID: " + ssid).c_str()), LCD_COLOR_WHITE);
 
    lcd_display_update();
+}
+
+void Menu::changeScreen(int direction) {
+   screenIndex += direction;
+
+   listeners[screenIndex % listeners.size()]();
+
 }

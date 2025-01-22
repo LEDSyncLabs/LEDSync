@@ -1,32 +1,11 @@
-idf_component_register(
-    SRCS 
-        "main.cpp" 
-        "modules/gatt_client/gatt_client.cpp" 
-        "modules/gatt_server/gatt_server.cpp" 
-        "modules/http_server/http_server.cpp" 
-        "modules/wifi/wifi_manager.cpp" 
-        "modules/utils/utils.cpp" 
-        "modules/mqtt/mqtt_manager.cpp" 
-        "modules/input/input.cpp"
-        "modules/input/button.cpp"
-        "modules/input/encoder.cpp"
-        "modules/input/potentiometer.cpp"
-        "modules/persistent_storage/persistent_storage.cpp"
-        "modules/input/ir.cpp"
-        "modules/lcd/lcd.cpp"
-        "management/registering_device_management/registering_device_management.cpp"
-        "management/lcd_management/lcd_management.cpp"
-    INCLUDE_DIRS 
-        "." 
-        "modules/gatt_client" 
-        "modules/gatt_server" 
-        "modules/wifi" 
-        "modules/utils" 
-        "modules/http_server" 
-        "modules/mqtt" 
-        "modules/input"
-        "modules/persistent_storage"
-        "modules/lcd"
-        "management/registering_device_management"
-        "management/lcd_management"
+file(GLOB_RECURSE SRC_FILES 
+    "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/modules/*.cpp"    
 )
+
+idf_component_register(
+    SRCS ${SRC_FILES}
+    INCLUDE_DIRS 
+        "."
+        "modules"        
+)                

@@ -1,12 +1,12 @@
 #include "cJSON.h"
-#include "gatt_client.h" // TODO remove but include here dependencies for nvs_... and ESP_...
-#include "gatt_server.h"
-#include "http_server.h"
-#include "mqtt_manager.h"
-#include "persistent_storage.h"
-#include "utils.h"
-#include "registering_device_management.h"
-#include "wifi_manager.h"
+#include "gatt_client/gatt_client.h" // TODO remove but include here dependencies for nvs_... and ESP_...
+#include "gatt_server/gatt_server.h"
+#include "http_server/http_server.h"
+#include "mqtt/mqtt_manager.h"
+#include "persistent_storage/persistent_storage.h"
+#include "utils/utils.h"
+#include "device_registerer/device_registerer.h"
+#include "wifi/wifi_manager.h"
 #include <esp_timer.h>
 #include <iostream>
 
@@ -25,7 +25,7 @@ extern "C" void app_main(void) {
   WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
   WifiManager::STA::start();
   
-  RegisteringDeviceManagement::checkIfDeviceIsRegistered();
+  DeviceRegisterer::tryRegister();
 
   PersistentStorage storage("MQTT");
   while (true) {

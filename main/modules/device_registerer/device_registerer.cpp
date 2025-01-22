@@ -1,12 +1,12 @@
-#include "registering_device_management.h"
+#include "device_registerer.h"
 #include "cJSON.h"
-#include "persistent_storage.h"
-#include "mqtt_manager.h"
-#include "utils.h" 
+#include "persistent_storage/persistent_storage.h"
+#include "mqtt/mqtt_manager.h"
+#include "utils/utils.h" 
 #include <iostream>
 #include "esp_timer.h"
 
-void RegisteringDeviceManagement::setClaim() {
+void DeviceRegisterer::setClaim() {
    PersistentStorage storage("MQTT");
 
    std::string secretKey = Utils::random_string(10);
@@ -33,7 +33,7 @@ void RegisteringDeviceManagement::setClaim() {
    
 }
 
-void RegisteringDeviceManagement::checkIfDeviceIsRegistered() {
+void DeviceRegisterer::tryRegister() {
   PersistentStorage storage("MQTT");
   std::string deviceName = storage.getValue("deviceName");
   std::string secretKey = storage.getValue("secretKey");

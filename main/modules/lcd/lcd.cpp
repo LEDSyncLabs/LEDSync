@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+
 /*
  This code displays some fancy graphics on the 320x240 LCD on an ESP-WROVER_KIT
  board. This example demonstrates the use of both spi_device_transmit as well as
