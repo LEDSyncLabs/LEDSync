@@ -26,6 +26,10 @@ public:
     Encoder();
     ~Encoder();
 
+    /// @brief Add listener for encoder rotation
+    /// @param pinA Clockwise pin
+    /// @param pinB Counter-clockwise pin
+    /// @param callback The callback function to be called when the encoder is rotated. Passed 1 for clockwise, -1 for counter-clockwise
     void addListener(gpio_num_t pinA, gpio_num_t pinB, Callback callback);
 
 private:
