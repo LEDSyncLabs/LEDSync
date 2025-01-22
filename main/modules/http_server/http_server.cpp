@@ -1,10 +1,10 @@
 #include "http_server.h"
 #include "esp_http_server.h"
-#include "utils.h"
-#include "wifi_manager.h"
+#include "utils/utils.h"
+#include "wifi/wifi_manager.h"
 #include <esp_wifi.h>
 #include <iostream>
-#include <persistent_storage.h>
+#include "persistent_storage/persistent_storage.h"
 
 HttpServer::HttpServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();

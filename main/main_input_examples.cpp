@@ -1,4 +1,4 @@
-#include "input.hpp"
+#include "input/input.hpp"
 
 void button_pressed(int value) {
     ESP_LOGI("Main", "Button pressed, value: %d", value);
