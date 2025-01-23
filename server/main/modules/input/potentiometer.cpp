@@ -1,6 +1,6 @@
 #include "potentiometer.hpp"
 
-std::unordered_map<adc2_channel_t, Potentiometer::Listener>
+std::unordered_map<adc1_channel_t, Potentiometer::Listener>
     Potentiometer::listeners;
 QueueHandle_t Potentiometer::adc_evt_queue = NULL;
 
@@ -18,33 +18,29 @@ void Potentiometer::start() {
     return;
   }
 
-  adc_evt_queue = xQueueCreate(10, sizeof(adc2_channel_t));
+  adc_evt_queue = xQueueCreate(10, sizeof(adc1_channel_t));
   xTaskCreate(potentiometer_task, "potentiometer_task", 2048, NULL, 10, NULL);
 }
 
-void Potentiometer::addListener(adc2_channel_t channel, Callback callback,
+void Potentiometer::addListener(adc1_channel_t channel, Callback callback,
                                 int intervalMs) {
   if (adc_evt_queue != NULL) {
     ESP_LOGW("Potentiometer", "Cannot add listener after starting the handler");
     return;
   }
 
-  adc2_config_channel_atten(channel, ADC_ATTEN_DB_12);
+  adc1_config_channel_atten(channel, ADC_ATTEN_DB_12);
 
   TickType_t delay = pdMS_TO_TICKS(intervalMs);
   listeners[channel] = {callback, delay};
 }
 
-int Potentiometer::read(adc2_channel_t channel) {
-  adc2_config_channel_atten(channel, ADC_ATTEN_DB_12);
+int Potentiometer::read(adc1_channel_t channel) {
+  adc1_config_channel_atten(channel, ADC_ATTEN_DB_12);
 
-  int value;
-  if (adc2_get_raw(channel, ADC_WIDTH_BIT_12, &value) == ESP_OK) {
-    return value;
-  } else {
-    ESP_LOGE("Potentiometer", "Failed to read ADC2 channel [%d]", channel);
-    return -1;
-  }
+  int value = adc1_get_raw(channel);
+
+  return value;
 }
 
 void Potentiometer::potentiometer_task(void *arg) {
@@ -57,14 +53,11 @@ void Potentiometer::potentiometer_task(void *arg) {
     TickType_t delay = 0;
 
     for (const auto &pair : listeners) {
-      adc2_channel_t channel = pair.first;
-      int value;
-      if (adc2_get_raw(channel, ADC_WIDTH_BIT_12, &value) == ESP_OK) {
-        // ESP_LOGI("Potentiometer", "Channel [%d] value: %d", channel, value);
-        pair.second.callback(value);
-      } else {
-        ESP_LOGE("Potentiometer", "Failed to read ADC2 channel [%d]", channel);
-      }
+      adc1_channel_t channel = pair.first;
+      int value = adc1_get_raw(channel);
+      ESP_LOGI("Potentiometer", "Channel [%d] value: %d", channel, value);
+      pair.second.callback(value);
+
       delay = pair.second.delay;
     }
 
