@@ -1,10 +1,43 @@
 #include "ADCSampler.h"
 
-ADCSampler::ADCSampler(adc_unit_t adcUnit, adc1_channel_t adcChannel,
-                       const i2s_config_t &i2s_config)
-    : I2SSampler(I2S_NUM_0, i2s_config) {
-  m_adcUnit = adcUnit;
+#define MIC_SAMPLE_SIZE 4096
+
+void ADCSampler::adcWriterTask() {
+  int16_t *samples = (int16_t *)malloc(sizeof(uint16_t) * MIC_SAMPLE_SIZE);
+
+  if (!samples) {
+    ESP_LOGI("main", "Failed to allocate memory for samples");
+    return;
+  }
+
+  while (true) {
+    int samples_read = read(samples, MIC_SAMPLE_SIZE);
+
+    callback(samples, samples_read);
+  }
+}
+
+void ADCSampler::adcWriterTaskWrapper(void* param) {
+    ADCSampler* instance = static_cast<ADCSampler*>(param);
+    instance->adcWriterTask();
+}
+
+ADCSampler::ADCSampler(adc1_channel_t adcChannel, Callback callback)
+    : I2SSampler(I2S_NUM_0), callback(callback) {
+
   m_adcChannel = adcChannel;
+
+  start();
+
+  xTaskCreatePinnedToCore(
+    adcWriterTaskWrapper,
+    "ADC Writer Task",                   // Task name
+    4096,                                // Stack size
+    nullptr,                             // Task parameters
+    1,                                   // Task priority
+    nullptr,                             // Task handle
+    1                                    // Core ID
+  );
 }
 
 void ADCSampler::configureI2S() {
