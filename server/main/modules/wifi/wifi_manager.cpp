@@ -93,7 +93,7 @@ bool WifiManager::STA::start() {
   std::string ssid, password;
 
   if (!WifiManager::STA::load_credentials(ssid, password)) {
-    throw std::runtime_error("No saved credentials found. Save first");
+    printf("No saved credentials found. Save first");
     return false;
   }
 
