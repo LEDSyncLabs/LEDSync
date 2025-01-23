@@ -15,4 +15,6 @@ extern "C" void app_main(void) {
     nvs_flash_init();
     std::cout << "NVS got erased" << std::endl;
   }
+
+  Menu* menu = new Menu();
 }
