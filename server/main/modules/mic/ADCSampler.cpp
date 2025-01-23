@@ -1,6 +1,6 @@
 #include "ADCSampler.h"
 
-#define MIC_SAMPLE_SIZE 4096
+#define MIC_SAMPLE_SIZE 8192
 
 void ADCSampler::adcWriterTask() {
   int16_t *samples = (int16_t *)malloc(sizeof(uint16_t) * MIC_SAMPLE_SIZE);

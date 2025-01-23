@@ -1,45 +1,31 @@
-#include "modules/gatt_client/gatt_client.h"
-#include "modules/types/ble_types.h"
+#include "esp_log.h"
+#include "gatt_client/gatt_client.h"
+#include "led_strip/led_strip.h"
+#include "soc/soc.h"
 
-gpio_num_t LED_A = GPIO_NUM_16;
-gpio_num_t LED_B = GPIO_NUM_5;
+#define LED_STRIP_LENGTH 30U
+#define LED_STRIP_RMT_INTR_NUM 19U
 
-void init_leds() {
-  gpio_config_t io_conf_a = {
-      .pin_bit_mask = (1ULL << GPIO_NUM_16),
-      .mode = GPIO_MODE_OUTPUT,
-      .pull_up_en = GPIO_PULLUP_DISABLE,
-      .pull_down_en = GPIO_PULLDOWN_DISABLE,
-      .intr_type = GPIO_INTR_DISABLE,
-  };
-  ESP_ERROR_CHECK(gpio_config(&io_conf_a));
-  gpio_set_level(LED_A, 0);
+#define PIN_LED_DATA GPIO_NUM_5
 
-  gpio_config_t io_conf_b = {.pin_bit_mask = (1ULL << LED_B),
-                             .mode = GPIO_MODE_OUTPUT};
-  ESP_ERROR_CHECK(gpio_config(&io_conf_b));
-  gpio_set_level(LED_B, 0);
+static struct led_color_t led_strip_buf_1[LED_STRIP_LENGTH];
+static struct led_color_t led_strip_buf_2[LED_STRIP_LENGTH];
+
+led_color_t *current_color = new led_color_t{.red = 255, .green = 0, .blue = 0};
+uint8_t current_brightness = 0x00;
+
+void change_color(void *data) {
+  led_color_t *colors = (led_color_t *)data;
+  current_color->red = colors->red;
+  current_color->green = colors->green;
+  current_color->blue = colors->blue;
 }
 
-void changeLeds(void *value) {
-  RGB_LED *led = (RGB_LED *)value;
-
-  printf("nice red: %d\n", led->red);
-  printf("nice green: %d\n", led->green);
-  printf("nice blue: %d\n", led->blue);
-}
-
-void changeBrightness(void *value) {
-  brightness *bright = (brightness *)value;
-
-  printf("nice brightness: %f\n", bright->value);
-}
+void change_brightness(void *data) { current_brightness = *(uint8_t *)data; }
 
 std::map<uint16_t, std::function<void(void *value)>> commandMap = {
-    {0xDE01, changeLeds},
-    {0xDE02, changeBrightness},
-    {0xBE01, changeLeds},
-    {0xBE02, changeBrightness},
+    {0xDE01, change_color},
+    {0xBE01, change_brightness},
 };
 
 void handle_notification(uint16_t handle, void *value) {
@@ -53,15 +39,50 @@ void handle_notification(uint16_t handle, void *value) {
 
 extern "C" void app_main(void) {
   std::map<uint16_t, std::vector<uint16_t>> service_data = {
-      {0xDEAD, {0xDE01, 0xDE02}},
-      {0xBEEF, {0xBE01, 0xBE02}},
+      {0xDEAD, {0xDE01}},
+      {0xBEEF, {0xBE01}},
   };
 
   GattClient::on_notify = handle_notification;
 
   GattClient::create(service_data);
 
-  init_leds();
+  led_strip_t *led_strip = new led_strip_t{
+      .rgb_led_type = RGB_LED_TYPE_WS2812,
+      .led_strip_length = LED_STRIP_LENGTH,
+      .rmt_channel = RMT_CHANNEL_1,
+      .rmt_interrupt_num = LED_STRIP_RMT_INTR_NUM,
+      .gpio = PIN_LED_DATA,
+      .led_strip_buf_1 = led_strip_buf_1,
+      .led_strip_buf_2 = led_strip_buf_2,
+
+  };
+  led_strip->access_semaphore = xSemaphoreCreateBinary();
+  bool led_init_ok = led_strip_init(led_strip);
+
+  if (!led_init_ok) {
+    ESP_LOGW("main", "LED strip initialization failed");
+
+    return;
+  }
+
+  led_strip_clear(led_strip);
+
+  while (1) {
+    vTaskDelay(30 / portTICK_PERIOD_MS);
+
+    led_color_t color = {
+        .red = (uint8_t)(current_color->red * (int)current_brightness / 255),
+        .green =
+            (uint8_t)(current_color->green * (int)current_brightness / 255),
+        .blue = (uint8_t)(current_color->blue * (int)current_brightness / 255),
+    };
+
+    // ESP_LOGI("led", "%d %d %d", color.red, color.green, color.blue);
+
+    for (uint32_t i = 0; i < LED_STRIP_LENGTH; ++i) {
+      led_strip_set_pixel_color(led_strip, i, &color);
+    }
+    led_strip_show(led_strip);
+  }
 }
-
-

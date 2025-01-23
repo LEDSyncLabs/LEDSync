@@ -3,6 +3,8 @@
 #include "driver/i2s.h"
 #include "esp_gatt_defs.h"
 #include "esp_log.h"
+#include "esp_random.h"
+#include "gatt_server/gatt_server.h"
 #include "input/input.hpp"
 #include "menu/menu.h"
 #include "mic/ADCSampler.h"
@@ -82,6 +84,28 @@ void adcWriterTask(void *param) {
 
 ADCSampler *adcSampler = NULL;
 
+void handle_mic(int16_t *samples, int count) {
+  int16_t min = INT16_MAX, max = INT16_MIN;
+
+  for (int16_t i = 0; i < count; i++) {
+    int16_t sample = samples[i];
+
+    if (sample > max) {
+      max = sample;
+    } else if (sample < min) {
+      min = sample;
+    }
+  }
+
+  int diff = max - min;
+
+  ESP_LOGI("ADC", "%d, %" PRId16 ", %" PRId16 ", %d", count, min, max, diff);
+
+  uint8_t level = diff / 256;
+
+  gatts_indicate_brightness(level);
+}
+
 extern "C" void app_main(void) {
   esp_err_t ret = nvs_flash_init();
 
@@ -101,35 +125,14 @@ extern "C" void app_main(void) {
   // Input::encoder.addListener(PIN_ENCODER_RIGHT, PIN_ENCODER_LEFT,
   //  encoder_rotated);
 
-  Input::potentiometer.addListener(PIN_POTENTIOMETER_LEFT,
-                                   potentiometer_changed, 500);
-  Input::potentiometer.addListener(PIN_POTENTIOMETER_RIGHT,
-                                   potentiometer_changed, 500);
+  // Input::potentiometer.addListener(PIN_POTENTIOMETER_LEFT,
+  //                                  potentiometer_changed, 500);
+  // Input::potentiometer.addListener(PIN_POTENTIOMETER_RIGHT,
+  //                                  potentiometer_changed, 500);
 
-  // Input::ir.addListener(ir_handler);
+  // Input::start();
 
-  // i2s_config_t adcI2SConfig = {
-  //     .mode =
-  //         (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX |
-  //         I2S_MODE_ADC_BUILT_IN),
-  //     .sample_rate = MIC_SAMPLE_RATE,
-  //     .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-  //     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-  //     .communication_format = I2S_COMM_FORMAT_I2S_LSB,
-  //     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-  //     .dma_buf_count = 4,
-  //     .dma_buf_len = 1024,
-  //     .use_apll = false,
-  //     .tx_desc_auto_clear = false,
-  //     .fixed_mclk = 0};
+  start_gatt_server();
 
-  // adcSampler = new ADCSampler(ADC_UNIT_1, PIN_MIC_OUT, adcI2SConfig);
-
-  // TaskHandle_t adcWriterTaskHandle;
-  // adcSampler->start();
-  // xTaskCreatePinnedToCore(adcWriterTask, "ADC Writer Task", 4096, adcSampler,
-  // 1,
-  //                         &adcWriterTaskHandle, 1);
-
-  Input::start();
+  new ADCSampler(PIN_MIC_OUT, handle_mic);
 }
