@@ -17,9 +17,9 @@ void ADCSampler::adcWriterTask() {
   }
 }
 
-void ADCSampler::adcWriterTaskWrapper(void* param) {
-    ADCSampler* instance = static_cast<ADCSampler*>(param);
-    instance->adcWriterTask();
+void ADCSampler::adcWriterTaskWrapper(void *param) {
+  ADCSampler *instance = static_cast<ADCSampler *>(param);
+  instance->adcWriterTask();
 }
 
 ADCSampler::ADCSampler(adc1_channel_t adcChannel, Callback callback)
@@ -29,14 +29,13 @@ ADCSampler::ADCSampler(adc1_channel_t adcChannel, Callback callback)
 
   start();
 
-  xTaskCreatePinnedToCore(
-    adcWriterTaskWrapper,
-    "ADC Writer Task",                   // Task name
-    4096,                                // Stack size
-    nullptr,                             // Task parameters
-    1,                                   // Task priority
-    nullptr,                             // Task handle
-    1                                    // Core ID
+  xTaskCreatePinnedToCore(adcWriterTaskWrapper,
+                          "ADC Writer Task", // Task name
+                          4096,              // Stack size
+                          this,              // Task parameters
+                          1,                 // Task priority
+                          nullptr,           // Task handle
+                          1                  // Core ID
   );
 }
 
