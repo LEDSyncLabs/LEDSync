@@ -5,11 +5,16 @@
 #include "esp_log.h"
 #include "esp_random.h"
 #include "gatt_server/gatt_server.h"
+#include "http_server/http_server.h"
 #include "input/input.hpp"
 #include "menu/menu.h"
 #include "mic/ADCSampler.h"
 #include "nvs.h"
 #include "nvs_flash.h"
+#include "persistent_storage/persistent_storage.h"
+#include "utils/utils.h"
+#include "wifi/wifi_manager.h"
+#include <esp_system.h>
 #include <inttypes.h>
 
 #define PIN_MIC_OUT ADC1_CHANNEL_3
@@ -30,61 +35,46 @@
 #define MIC_SAMPLE_SIZE 4096
 #define MIC_SAMPLE_RATE 16384
 
+#define NORMAL_MODE "normal"
+#define CONFIG_MODE "config"
+
 #define TAG_MAIN "main"
 
-void button_pressed(int value) {
-  ESP_LOGI(TAG_MAIN, "Button pressed, value: %d", value);
-}
+static int hue_step = 30;
+static float current_h = 0;
+static float current_s = 1;
+static float current_v = 1;
 
-int counter = 0;
-void encoder_rotated(int direction) {
-  counter += direction;
-  ESP_LOGI(TAG_MAIN, "Encoder rotated, direction: %d, counter: %d", direction,
-           counter);
-}
+void hue_change(int value) {
+  current_h += hue_step * value;
 
-void potentiometer_changed(int value) {
-  ESP_LOGI(TAG_MAIN, "Potentiometer value: %d", value);
+  if (current_h > 360) {
+    current_h -= 360;
+  }
+
+  float r = 0, g = 0, b = 0;
+  HSVtoRGB(&r, &g, &b, current_h, current_s, current_v);
+
+  led_color_t color = {
+      .red = (uint8_t)(r * 0xFF),
+      .green = (uint8_t)(g * 0xFF),
+      .blue = (uint8_t)(b * 0xFF),
+  };
+
+  gatts_indicate_color(color);
 }
 
 void ir_handler(uint16_t command) {
   ESP_LOGI(TAG_MAIN, "IR received, command: %04X", command);
 }
 
-void adcWriterTask(void *param) {
-  I2SSampler *sampler = (I2SSampler *)param;
-  int16_t *samples = (int16_t *)malloc(sizeof(uint16_t) * MIC_SAMPLE_SIZE);
-
-  if (!samples) {
-    ESP_LOGI("main", "Failed to allocate memory for samples");
-    return;
-  }
-
-  while (true) {
-    int samples_read = sampler->read(samples, MIC_SAMPLE_SIZE);
-
-    int16_t min = INT16_MAX, max = INT16_MIN;
-
-    for (int16_t i = 0; i < samples_read; i++) {
-      int16_t sample = samples[i];
-
-      if (sample > max) {
-        max = sample;
-      } else if (sample < min) {
-        min = sample;
-      }
-    }
-
-    int diff = max - min;
-
-    ESP_LOGI(TAG_MAIN, "%d, %" PRId16 ", %" PRId16 ", %d", samples_read, min,
-             max, diff);
-  }
-}
-
 ADCSampler *adcSampler = NULL;
 
 void handle_mic(int16_t *samples, int count) {
+  if (!has_clients()) {
+    return;
+  }
+
   int16_t min = INT16_MAX, max = INT16_MIN;
 
   for (int16_t i = 0; i < count; i++) {
@@ -99,11 +89,25 @@ void handle_mic(int16_t *samples, int count) {
 
   int diff = max - min;
 
-  ESP_LOGI("ADC", "%d, %" PRId16 ", %" PRId16 ", %d", count, min, max, diff);
+  // ESP_LOGI("ADC", "%d, %" PRId16 ", %" PRId16 ", %d", count, min, max, diff);
 
   uint8_t level = diff / 256;
-
   gatts_indicate_brightness(level);
+}
+
+PersistentStorage storage("main");
+
+void change_device_mode_and_restart(int value) {
+  std::string mode = storage.getValue("mode");
+
+  if (mode == NORMAL_MODE) {
+    mode = CONFIG_MODE;
+  } else {
+    mode = NORMAL_MODE;
+  }
+
+  storage.saveValue("mode", mode);
+  esp_restart();
 }
 
 extern "C" void app_main(void) {
@@ -117,8 +121,6 @@ extern "C" void app_main(void) {
     ESP_LOGW(TAG_MAIN, "NVS got erased");
   }
 
-  // Input::button.addListener(PIN_SELECT_LEFT, button_pressed);
-  // Input::button.addListener(PIN_SELECT_RIGHT, button_pressed);
   // Input::button.addListener(PIN_SELECT_ABORT, button_pressed);
   // Input::button.addListener(PIN_SELECT_CONFIRM, button_pressed);
 
@@ -132,7 +134,36 @@ extern "C" void app_main(void) {
 
   // Input::start();
 
-  start_gatt_server();
+  std::string mode = storage.getValue("mode");
+  std::string ssid, password;
+  WifiManager::STA::load_credentials(ssid, password);
 
-  new ADCSampler(PIN_MIC_OUT, handle_mic);
+  if (mode == "") {
+    mode = NORMAL_MODE;
+    storage.saveValue("mode", mode);
+  }
+
+  if (mode == NORMAL_MODE && ssid != "" && password != "") {
+    WifiManager::STA::start();
+
+    start_gatt_server();
+
+    Input::button.addListener(PIN_SELECT_LEFT,
+                              [](int value) { hue_change(-1); });
+    Input::button.addListener(PIN_SELECT_RIGHT,
+                              [](int value) { hue_change(1); });
+
+    new ADCSampler(PIN_MIC_OUT, handle_mic);
+  } else {
+    mode = CONFIG_MODE;
+    storage.saveValue("mode", mode);
+
+    WifiManager::AP::save_ssid("LEDSync Setup");
+    WifiManager::AP::start();
+    HttpServer *httpServer = new HttpServer();
+  }
+
+  Input::button.addListener(PIN_SELECT_ABORT, change_device_mode_and_restart);
+
+  Input::start();
 }

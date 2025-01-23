@@ -136,6 +136,8 @@ void GattClient::create(
   }
 }
 
+bool skip = false;
+
 void GattClient::gattc_profile_event_handler(esp_gattc_cb_event_t event,
                                              esp_gatt_if_t gattc_if,
                                              esp_ble_gattc_cb_param_t *param) {
@@ -254,8 +256,20 @@ void GattClient::gattc_profile_event_handler(esp_gattc_cb_event_t event,
         if (!char_elem_result) {
           ESP_LOGE(GATTC_TAG, "gattc no mem");
         } else {
+          int i = 0;
           for (const auto &service : GattClient::services) {
+            if (i > 0) {
+              continue;
+            }
+            if (skip) {
+              skip = false;
+              continue;
+            }
+            skip = true;
+            i++;
+            ESP_LOGI("SVC", "%x", service.uuid.uuid.uuid16);
             for (const auto &characteristic : service.characteristics) {
+              ESP_LOGI("CHAR", "%x", characteristic.uuid.uuid.uuid16);
               status = esp_ble_gattc_get_char_by_uuid(
                   gattc_if, p_data->search_cmpl.conn_id,
                   gl_profile_tab[PROFILE_A_APP_ID].service_start_handle,

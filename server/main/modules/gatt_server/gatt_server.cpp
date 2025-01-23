@@ -201,6 +201,10 @@ typedef struct {
 static prepare_type_env_t a_prepare_write_env;
 static prepare_type_env_t b_prepare_write_env;
 
+static int clients = 0;
+
+bool has_clients() { return clients != 0; }
+
 void example_write_event_env(esp_gatt_if_t gatts_if,
                              prepare_type_env_t *prepare_write_env,
                              esp_ble_gatts_cb_param_t *param);
@@ -489,10 +493,10 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event,
     uint16_t length = 0;
     const uint8_t *prf_char;
 
-    ESP_LOGI(GATTS_TAG,
-             "ADD_CHAR_EVT, status %d,  attr_handle %d, service_handle %d\n",
-             param->add_char.status, param->add_char.attr_handle,
-             param->add_char.service_handle);
+    // ESP_LOGI(GATTS_TAG,
+    //          "ADD_CHAR_EVT, status %d,  attr_handle %d, service_handle %d\n",
+    //          param->add_char.status, param->add_char.attr_handle,
+    //          param->add_char.service_handle);
     gl_profile_tab[PROFILE_A_APP_ID].char_handle = param->add_char.attr_handle;
     gl_profile_tab[PROFILE_A_APP_ID].descr_uuid.len = ESP_UUID_LEN_16;
     gl_profile_tab[PROFILE_A_APP_ID].descr_uuid.uuid.uuid16 =
@@ -538,6 +542,7 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event,
     break;
   }
   case ESP_GATTS_CONNECT_EVT: {
+    ++clients;
     esp_ble_conn_update_params_t conn_params = {0};
     memcpy(conn_params.bda, param->connect.remote_bda, sizeof(esp_bd_addr_t));
     /* For the IOS system, please reference the apple official documents about
@@ -559,14 +564,15 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event,
     break;
   }
   case ESP_GATTS_DISCONNECT_EVT: {
+    --clients;
     ESP_LOGI(GATTS_TAG, "ESP_GATTS_DISCONNECT_EVT, disconnect reason 0x%x",
              param->disconnect.reason);
     esp_ble_gap_start_advertising(&adv_params);
     break;
   }
   case ESP_GATTS_CONF_EVT: {
-    ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONF_EVT, status %d attr_handle %d",
-             param->conf.status, param->conf.handle);
+    // ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONF_EVT, status %d attr_handle %d",
+    //          param->conf.status, param->conf.handle);
     if (param->conf.status != ESP_GATT_OK) {
       esp_log_buffer_hex(GATTS_TAG, param->conf.value, param->conf.len);
     }
@@ -743,8 +749,8 @@ static void gatts_profile_b_event_handler(esp_gatts_cb_event_t event,
     break;
   }
   case ESP_GATTS_CONF_EVT: {
-    ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONF_EVT status %d attr_handle %d",
-             param->conf.status, param->conf.handle);
+    // ESP_LOGI(GATTS_TAG, "ESP_GATTS_CONF_EVT status %d attr_handle %d",
+    //          param->conf.status, param->conf.handle);
     if (param->conf.status != ESP_GATT_OK) {
       esp_log_buffer_hex(GATTS_TAG, param->conf.value, param->conf.len);
     }
@@ -796,6 +802,8 @@ void structToByteArray(const led_color_t &color, uint8_t *byteArray,
 void gatts_indicate_color(led_color_t color) {
   uint8_t data[sizeof(led_color_t)];
   structToByteArray(color, data, sizeof(color));
+
+  ESP_LOGI("AAA", "%hu %hu %hu", color.red, color.green, color.blue);
 
   esp_ble_gatts_send_indicate(gl_profile_tab[PROFILE_A_APP_ID].gatts_if,
                               gl_profile_tab[PROFILE_A_APP_ID].conn_id,

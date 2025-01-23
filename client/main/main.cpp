@@ -15,7 +15,9 @@ led_color_t *current_color = new led_color_t{.red = 255, .green = 0, .blue = 0};
 uint8_t current_brightness = 0x00;
 
 void change_color(void *data) {
+
   led_color_t *colors = (led_color_t *)data;
+  ESP_LOGI("AAA", "%hu %hu %hu", colors->red, colors->green, colors->blue);
   current_color->red = colors->red;
   current_color->green = colors->green;
   current_color->blue = colors->blue;
