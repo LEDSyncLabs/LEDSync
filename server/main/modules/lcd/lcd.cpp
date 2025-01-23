@@ -13,21 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-/*
- This code displays some fancy graphics on the 320x240 LCD on an ESP-WROVER_KIT
- board. This example demonstrates the use of both spi_device_transmit as well as
- spi_device_queue_trans/spi_device_get_trans_result and pre-transmit callbacks.
-
- Some info about the ILI9341/ST7789V: It has an C/D line, which is connected to
- a GPIO here. It expects this line to be low for a command and high for data. We
- use a pre-transmit callback here to control that line: every transaction has as
- the user-definable argument the needed state of the D/C line and just before
- the transaction is sent, the callback will set this line to the correct state.
-*/
-
-
-
 static spi_device_handle_t spi;
 static uint16_t display_buffer[DISPLAY_WIDTH * DISPLAY_HEIGHT] = {0};
 static uint16_t write_buffer[DISPLAY_WIDTH * DISPLAY_HEIGHT] = {0};
@@ -158,15 +143,15 @@ void lcd_data(const uint8_t *data, int len) {
 // It will set the D/C line to the value indicated in the user field.
 void lcd_spi_pre_transfer_callback(spi_transaction_t *t) {
   int dc = (int)t->user;
-  gpio_set_level(PIN_NUM_DC, dc);
+  gpio_set_level(PIN_LCD_DC, dc);
 }
 
 // Initialize the display
 void lcd_init() {
   esp_err_t ret;
-  spi_bus_config_t buscfg = {.mosi_io_num = PIN_NUM_MOSI,
-                             .miso_io_num = PIN_NUM_MISO,
-                             .sclk_io_num = PIN_NUM_CLK,
+  spi_bus_config_t buscfg = {.mosi_io_num = PIN_LCD_MOSI,
+                             .miso_io_num = PIN_LCD_MISO,
+                             .sclk_io_num = PIN_LCD_CLK,
                              .quadwp_io_num = -1,
                              .quadhd_io_num = -1,
                              .max_transfer_sz =
@@ -174,7 +159,7 @@ void lcd_init() {
   spi_device_interface_config_t devcfg = {
       .mode = 0,                          // SPI mode 0
       .clock_speed_hz = 10 * 1000 * 1000, // Clock out at 10 MHz
-      .spics_io_num = PIN_NUM_CS,         // CS pin
+      .spics_io_num = PIN_LCD_CS,         // CS pin
       .queue_size = 7, // We want to be able to queue 7 transactions at a time
       .pre_cb = lcd_spi_pre_transfer_callback, // Specify pre-transfer callback
                                                // to handle D/C line
@@ -191,16 +176,16 @@ void lcd_init() {
   // Initialize non-SPI GPIOs
   gpio_config_t io_conf = {};
   io_conf.pin_bit_mask =
-      ((1ULL << PIN_NUM_DC) | (1ULL << PIN_NUM_RST) | (1ULL << PIN_NUM_BCKL));
-  // ((1ULL << PIN_NUM_DC) | (1ULL << PIN_NUM_RST));
+      ((1ULL << PIN_LCD_DC) | (1ULL << PIN_LCD_RST) | (1ULL << PIN_LCD_BCKL));
+  // ((1ULL << PIN_LCD_DC) | (1ULL << PIN_LCD_RST));
   io_conf.mode = GPIO_MODE_OUTPUT;
   io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
   gpio_config(&io_conf);
 
   // Reset the display
-  gpio_set_level(PIN_NUM_RST, 0);
+  gpio_set_level(PIN_LCD_RST, 0);
   vTaskDelay(100 / portTICK_PERIOD_MS);
-  gpio_set_level(PIN_NUM_RST, 1);
+  gpio_set_level(PIN_LCD_RST, 1);
   vTaskDelay(100 / portTICK_PERIOD_MS);
 
   // Send all the commands
@@ -226,7 +211,7 @@ void lcd_init() {
   lcd_display_update();
 
   // Enable backlight
-  gpio_set_level(PIN_NUM_BCKL, 1);
+  gpio_set_level(PIN_LCD_BCKL, 1);
 }
 
 /* To send a set of lines we have to send a command, 2 data bytes, another
