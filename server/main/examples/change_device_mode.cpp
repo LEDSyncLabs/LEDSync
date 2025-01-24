@@ -43,8 +43,10 @@ extern "C" void app_main(void) {
     storage.saveValue("mode", mode);
   }
 
-  if(mode == NORMAL_MODE) {
-    WifiManager::STA::save_credentials("ESP32", "zaq1@WSX");
+  std::string ssid, password;
+  WifiManager::STA::load_credentials(ssid, password);
+
+  if(mode == NORMAL_MODE && ssid != "" && password != "") {   
     WifiManager::STA::start();
   } else {
     WifiManager::AP::save_ssid("LEDSync Setup");
