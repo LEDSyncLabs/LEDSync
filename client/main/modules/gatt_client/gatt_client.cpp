@@ -410,6 +410,11 @@ void GattClient::gattc_profile_event_handler(esp_gattc_cb_event_t event,
     GattClient::get_server = false;
     ESP_LOGI(GATTC_TAG, "ESP_GATTC_DISCONNECT_EVT, reason = %d",
              p_data->disconnect.reason);
+
+    ESP_LOGI(GATTC_TAG, "Attempting to reconnect to the server...");
+    skip = false;
+    esp_ble_gap_start_scanning(300);
+
     break;
   }
   default: {
@@ -426,7 +431,7 @@ void GattClient::esp_gap_cb(esp_gap_ble_cb_event_t event,
   switch (event) {
   case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
     // the unit of the duration is second
-    uint32_t duration = 30;
+    uint32_t duration = 300;
     esp_ble_gap_start_scanning(duration);
     break;
   }
@@ -445,18 +450,18 @@ void GattClient::esp_gap_cb(esp_gap_ble_cb_event_t event,
     switch (scan_result->scan_rst.search_evt) {
     case ESP_GAP_SEARCH_INQ_RES_EVT:
       esp_log_buffer_hex(GATTC_TAG, scan_result->scan_rst.bda, 6);
-      ESP_LOGI(GATTC_TAG, "searched Adv Data Len %d, Scan Response Len %d",
-               scan_result->scan_rst.adv_data_len,
-               scan_result->scan_rst.scan_rsp_len);
+    //   ESP_LOGI(GATTC_TAG, "searched Adv Data Len %d, Scan Response Len %d",
+    //            scan_result->scan_rst.adv_data_len,
+    //            scan_result->scan_rst.scan_rsp_len);
       adv_name = esp_ble_resolve_adv_data_by_type(
           scan_result->scan_rst.ble_adv,
           scan_result->scan_rst.adv_data_len +
               scan_result->scan_rst.scan_rsp_len,
           ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
 
-      ESP_LOGI(GATTC_TAG, "searched Device Name Len %d", adv_name_len);
+    //   ESP_LOGI(GATTC_TAG, "searched Device Name Len %d", adv_name_len);
       esp_log_buffer_char(GATTC_TAG, adv_name, adv_name_len);
-      ESP_LOGI(GATTC_TAG, "\n");
+    //   ESP_LOGI(GATTC_TAG, "\n");
 
       if (adv_name != NULL) {
         if (strlen(GattClient::remote_device_name) == adv_name_len &&
