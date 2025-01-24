@@ -59,7 +59,7 @@ void Menu::drawWifiInfoWindow() {
     lcd_draw_text(6, 26, const_cast<char *>(("SSID: " + ssid).c_str()),
                   LCD_COLOR_WHITE);
     lcd_draw_text(6, 56, "IP: 192.168.4.1", LCD_COLOR_WHITE);
-  } else {
+  } else if (WifiManager::STA::is_started()) {
     std::string ssid, pass;
     WifiManager::STA::load_credentials(ssid, pass);
 
@@ -71,6 +71,8 @@ void Menu::drawWifiInfoWindow() {
     } else {
       lcd_draw_text(6, 56, "Connecting", LCD_COLOR_CYAN);
     }
+  } else {
+    lcd_draw_text(6, 6, "Initializing...", LCD_COLOR_CYAN);
   }
 
   lcd_display_update();

@@ -11,13 +11,16 @@
 #include "lcd/lcd.h"
 #include "menu/menu.h"
 #include "mic/ADCSampler.h"
+#include "mqtt/mqtt_manager.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "persistent_storage/persistent_storage.h"
 #include "utils/utils.h"
 #include "wifi/wifi_manager.h"
+#include <cJSON.h>
 #include <esp_system.h>
 #include <inttypes.h>
+#include <numeric>
 
 #define PIN_MIC_OUT ADC1_CHANNEL_3
 
@@ -70,13 +73,37 @@ void ir_handler(uint16_t command) {
   ESP_LOGI(TAG_MAIN, "IR received, command: %04X", command);
 }
 
+std::vector<uint8_t> volume_samples;
+MQTTManager *mqttManagerTelemetry = nullptr;
+
+void send_volume_average() {
+  uint64_t sum = std::accumulate(volume_samples.begin(), volume_samples.end(),
+                                 uint64_t(0));
+
+  double average = static_cast<double>(sum) / volume_samples.size();
+
+  cJSON *root = cJSON_CreateObject();
+  cJSON_AddNumberToObject(root, "volume", average);
+  char *jsonString = cJSON_Print(root);
+
+  mqttManagerTelemetry->publish("v1/devices/me/telemetry", jsonString);
+
+  cJSON_Delete(root);
+  free(jsonString);
+}
+
+void add_volume_sample(uint8_t level) {
+  volume_samples.push_back(level);
+
+  if (volume_samples.size() == 256) {
+    send_volume_average();
+    volume_samples.clear();
+  }
+}
+
 ADCSampler *adcSampler = NULL;
 
 void handle_mic(int16_t *samples, int count) {
-  if (!has_clients()) {
-    return;
-  }
-
   int16_t min = INT16_MAX, max = INT16_MIN;
 
   for (int16_t i = 0; i < count; i++) {
@@ -91,10 +118,11 @@ void handle_mic(int16_t *samples, int count) {
 
   int diff = max - min;
 
-  // ESP_LOGI("ADC", "%d, %" PRId16 ", %" PRId16 ", %d", count, min, max, diff);
-
   uint8_t level = diff / 256;
+
+  ESP_LOGI(TAG_MAIN, "min:%d max:%d diff:%d level:%hu", min, max, diff, level);
   gatts_indicate_brightness(level);
+  add_volume_sample(level);
 }
 
 PersistentStorage storage("main");
@@ -123,19 +151,6 @@ extern "C" void app_main(void) {
     ESP_LOGW(TAG_MAIN, "NVS got erased");
   }
 
-  // Input::button.addListener(PIN_SELECT_ABORT, button_pressed);
-  // Input::button.addListener(PIN_SELECT_CONFIRM, button_pressed);
-
-  // Input::encoder.addListener(PIN_ENCODER_RIGHT, PIN_ENCODER_LEFT,
-  //  encoder_rotated);
-
-  // Input::potentiometer.addListener(PIN_POTENTIOMETER_LEFT,
-  //                                  potentiometer_changed, 500);
-  // Input::potentiometer.addListener(PIN_POTENTIOMETER_RIGHT,
-  //                                  potentiometer_changed, 500);
-
-  // Input::start();
-
   std::string mode = storage.getValue("mode");
   std::string ssid, password;
   WifiManager::STA::load_credentials(ssid, password);
@@ -145,23 +160,27 @@ extern "C" void app_main(void) {
     storage.saveValue("mode", mode);
   }
 
+  new Menu(PIN_ENCODER_LEFT, PIN_ENCODER_RIGHT);
+
   if (mode == NORMAL_MODE && ssid != "" && password != "") {
-    new Menu(PIN_ENCODER_LEFT, PIN_ENCODER_RIGHT);
 
     WifiManager::STA::start();
     DeviceRegisterer::tryRegister();
 
     PersistentStorage storage("MQTT");
     while (true) {
-      vTaskDelay(250 / portTICK_PERIOD_MS);
-
       std::string deviceName = storage.getValue("deviceName");
       std::string secretKey = storage.getValue("secretKey");
       std::string accessToken = storage.getValue("accessToken");
 
       if (deviceName != "" && secretKey != "" && accessToken != "") {
+        mqttManagerTelemetry = new MQTTManager(MQTTManager::url, accessToken);
+        mqttManagerTelemetry->connect();
+
         break;
       }
+
+      vTaskDelay(250 / portTICK_PERIOD_MS);
     }
 
     start_gatt_server();

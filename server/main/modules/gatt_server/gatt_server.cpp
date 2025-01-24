@@ -800,6 +800,10 @@ void structToByteArray(const led_color_t &color, uint8_t *byteArray,
 }
 
 void gatts_indicate_color(led_color_t color) {
+  if (!has_clients()) {
+    return;
+  }
+
   uint8_t data[sizeof(led_color_t)];
   structToByteArray(color, data, sizeof(color));
 
@@ -812,6 +816,10 @@ void gatts_indicate_color(led_color_t color) {
 }
 
 void gatts_indicate_brightness(uint8_t brightness) {
+  if (!has_clients()) {
+    return;
+  }
+
   esp_ble_gatts_send_indicate(gl_profile_tab[PROFILE_B_APP_ID].gatts_if,
                               gl_profile_tab[PROFILE_B_APP_ID].conn_id,
                               gl_profile_tab[PROFILE_B_APP_ID].char_handle,
