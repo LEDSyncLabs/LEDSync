@@ -227,6 +227,8 @@ extern "C" void app_main(void) {
       Menu::draw = !turn_off;
     });
 
+    Input::ir.addListener(0xBB44, [](uint16_t command) { Menu::draw = false; });
+
     new ADCSampler(PIN_MIC_OUT, handle_mic);
 
     Input::button.addListener(PIN_SELECT_CONFIRM, [](int value) {
