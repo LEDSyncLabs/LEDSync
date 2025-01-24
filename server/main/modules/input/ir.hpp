@@ -51,5 +51,8 @@ private:
     static rmt_channel_handle_t rx_channel;
     static const rmt_receive_config_t receive_config;
 
+    int64_t last_command_time;
+    static constexpr int64_t debounce_time_us = 200000; // 200ms debounce time
+
     friend class Input;
 };

@@ -1,4 +1,5 @@
 #include "ir.hpp"
+#include "esp_timer.h"
 
 #define EXAMPLE_IR_RESOLUTION_HZ 1000000 // 1MHz resolution, 1 tick = 1us
 #define EXAMPLE_IR_RX_GPIO_NUM GPIO_NUM_4
@@ -29,7 +30,7 @@ const rmt_receive_config_t IR::receive_config = {
     .signal_range_max_ns = 12000000,
 };
 
-IR::IR() {}
+IR::IR() : last_command_time(0) {}
 
 IR::~IR() { vQueueDelete(gpio_evt_queue); }
 
@@ -81,6 +82,15 @@ void IR::ir_task(void *arg) {
   rmt_rx_done_event_data_t rx_data;
   while (1) {
     if (xQueueReceive(gpio_evt_queue, &rx_data, portMAX_DELAY)) {
+      int64_t now = esp_timer_get_time();
+      if (now - ir_instance->last_command_time < debounce_time_us) {
+        // Ignore this command as it is within the debounce time
+        ESP_ERROR_CHECK(rmt_receive(rx_channel, raw_symbols, sizeof(raw_symbols),
+                                    &receive_config));
+        continue;
+      }
+      ir_instance->last_command_time = now;
+
       ir_instance->parse_nec_frame(rx_data.received_symbols,
                                    rx_data.num_symbols);
       if (default_callback) {
