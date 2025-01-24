@@ -130,6 +130,8 @@ void handle_mic(int16_t *samples, int count) {
 
   uint8_t level = diff / 256;
 
+  // ESP_LOGI("aaa", "%lld", esp_timer_get_time());
+
   // ESP_LOGI(TAG_MAIN, "min:%d max:%d diff:%d level:%hu", min, max, diff,
   // level);
   gatts_indicate_brightness(level);
@@ -214,6 +216,10 @@ extern "C" void app_main(void) {
     Input::ir.addListener(0xB54A, [](uint16_t command) { hue_set(0.9 * 360); });
 
     new ADCSampler(PIN_MIC_OUT, handle_mic);
+
+    Input::button.addListener(PIN_SELECT_CONFIRM, [](int value) {
+      gatts_start_advert(30 * 1000 * 1000);
+    });
   } else {
     mode = CONFIG_MODE;
     storage.saveValue("mode", mode);

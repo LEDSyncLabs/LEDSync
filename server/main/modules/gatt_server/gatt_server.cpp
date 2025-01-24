@@ -218,7 +218,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
   case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT: {
     adv_config_done &= (~adv_config_flag);
     if (adv_config_done == 0) {
-      esp_ble_gap_start_advertising(&adv_params);
+      // esp_ble_gap_start_advertising(&adv_params);
+      // esp_ble_gap_stop_advertising();
     }
     break;
   }
@@ -227,7 +228,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
   case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT: {
     adv_config_done &= (~scan_rsp_config_flag);
     if (adv_config_done == 0) {
-      esp_ble_gap_start_advertising(&adv_params);
+      // esp_ble_gap_start_advertising(&adv_params);
+      // esp_ble_gap_stop_advertising();
     }
     break;
   }
@@ -567,7 +569,8 @@ static void gatts_profile_a_event_handler(esp_gatts_cb_event_t event,
     --clients;
     ESP_LOGI(GATTS_TAG, "ESP_GATTS_DISCONNECT_EVT, disconnect reason 0x%x",
              param->disconnect.reason);
-    esp_ble_gap_start_advertising(&adv_params);
+    // esp_ble_gap_start_advertising(&adv_params);
+    // esp_ble_gap_stop_advertising();
     break;
   }
   case ESP_GATTS_CONF_EVT: {
@@ -826,6 +829,34 @@ void gatts_indicate_brightness(uint8_t brightness) {
                               sizeof(brightness), &brightness, false);
 }
 
+static int64_t gatts_advert_stop_time = 0;
+static bool is_advertising = false;
+
+void gatts_advert_task(void *params) {
+  while (1) {
+    int64_t current_time = esp_timer_get_time();
+
+    if (current_time >= gatts_advert_stop_time && is_advertising &&
+        !has_clients()) {
+      ESP_LOGI("gatts", "stop advert");
+      esp_ble_gap_stop_advertising();
+      is_advertising = false;
+    }
+
+    vTaskDelay(50 / portTICK_PERIOD_MS);
+  }
+}
+
+void gatts_start_advert(int64_t time) {
+  if (!is_advertising && !has_clients()) {
+    ESP_LOGI("gatts", "start advert");
+    esp_ble_gap_start_advertising(&adv_params);
+    is_advertising = true;
+  }
+
+  gatts_advert_stop_time = esp_timer_get_time() + time;
+}
+
 void start_gatt_server(void) {
   esp_err_t ret;
 
@@ -883,6 +914,9 @@ void start_gatt_server(void) {
     ESP_LOGE(GATTS_TAG, "set local  MTU failed, error code = %x",
              local_mtu_ret);
   }
+
+  xTaskCreate(gatts_advert_task, "Gatts advert task", 2048, nullptr, 10,
+              nullptr);
 
   return;
 }
