@@ -114,6 +114,7 @@ void add_volume_sample(uint8_t level) {
 ADCSampler *adcSampler = NULL;
 
 bool turn_off = false;
+bool hue_shift = false;
 
 void handle_mic(int16_t *samples, int count) {
   int16_t min = INT16_MAX, max = INT16_MIN;
@@ -136,9 +137,14 @@ void handle_mic(int16_t *samples, int count) {
 
   // ESP_LOGI(TAG_MAIN, "min:%d max:%d diff:%d level:%hu", min, max, diff,
   // level);
+
   if (turn_off == true) {
     gatts_indicate_brightness(0);
   } else {
+    if (hue_shift) {
+      hue_set(current_h + 5);
+    }
+
     gatts_indicate_brightness(level);
   }
 
@@ -205,10 +211,12 @@ extern "C" void app_main(void) {
 
     start_gatt_server();
 
-    Input::button.addListener(PIN_SELECT_LEFT,
-                              [](int value) { hue_change(-1); });
-    Input::button.addListener(PIN_SELECT_RIGHT,
-                              [](int value) { hue_change(1); });
+    Input::button.addListener(PIN_SELECT_LEFT, [](int value) {
+      hue_set(current_h + hue_step * value);
+    });
+    Input::button.addListener(PIN_SELECT_RIGHT, [](int value) {
+      hue_set(current_h + hue_step * value);
+    });
 
     Input::ir.addListener(ir_handler);
     Input::ir.addListener(0xE916, [](uint16_t command) { hue_set(0.0 * 360); });
@@ -226,6 +234,9 @@ extern "C" void app_main(void) {
       turn_off = !turn_off;
       Menu::draw = !turn_off;
     });
+
+    Input::ir.addListener(0xEA15,
+                          [](uint16_t command) { hue_shift = !hue_shift; });
 
     Input::ir.addListener(0xBB44, [](uint16_t command) { Menu::draw = false; });
 
