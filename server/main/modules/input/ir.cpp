@@ -1,7 +1,7 @@
 #include "ir.hpp"
 
 #define EXAMPLE_IR_RESOLUTION_HZ 1000000 // 1MHz resolution, 1 tick = 1us
-#define EXAMPLE_IR_RX_GPIO_NUM GPIO_NUM_15
+#define EXAMPLE_IR_RX_GPIO_NUM GPIO_NUM_4
 #define EXAMPLE_IR_NEC_DECODE_MARGIN                                           \
   300 // Tolerance for parsing RMT symbols into bit stream
 

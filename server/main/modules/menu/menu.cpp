@@ -20,6 +20,12 @@ Menu::Menu(gpio_num_t left, gpio_num_t right) {
 
   Input::encoder.addListener(
       left, right, std::bind(&Menu::changeScreen, this, std::placeholders::_1));
+
+  Input::ir.addListener(0xF807,
+                        [this](uint16_t command) { this->changeScreen(-1); });
+
+  Input::ir.addListener(0xF609,
+                        [this](uint16_t command) { this->changeScreen(1); });
 }
 
 void Menu::drawDeviceInfoWindow() {

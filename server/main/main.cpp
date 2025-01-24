@@ -50,11 +50,15 @@ static float current_h = 0;
 static float current_s = 1;
 static float current_v = 1;
 
-void hue_change(int value) {
-  current_h += hue_step * value;
+void hue_set(int value) {
+  current_h = value;
 
   if (current_h > 360) {
     current_h -= 360;
+  }
+
+  if (current_h < 0) {
+    current_h += 360;
   }
 
   float r = 0, g = 0, b = 0;
@@ -67,6 +71,12 @@ void hue_change(int value) {
   };
 
   gatts_indicate_color(color);
+}
+
+void hue_change(int value) {
+  int new_hue = current_h + hue_step * value;
+
+  hue_set(new_hue);
 }
 
 void ir_handler(uint16_t command) {
@@ -120,7 +130,8 @@ void handle_mic(int16_t *samples, int count) {
 
   uint8_t level = diff / 256;
 
-  ESP_LOGI(TAG_MAIN, "min:%d max:%d diff:%d level:%hu", min, max, diff, level);
+  // ESP_LOGI(TAG_MAIN, "min:%d max:%d diff:%d level:%hu", min, max, diff,
+  // level);
   gatts_indicate_brightness(level);
   add_volume_sample(level);
 }
@@ -190,6 +201,18 @@ extern "C" void app_main(void) {
     Input::button.addListener(PIN_SELECT_RIGHT,
                               [](int value) { hue_change(1); });
 
+    Input::ir.addListener(ir_handler);
+    Input::ir.addListener(0xE916, [](uint16_t command) { hue_set(0.0 * 360); });
+    Input::ir.addListener(0xF30C, [](uint16_t command) { hue_set(0.1 * 360); });
+    Input::ir.addListener(0xE718, [](uint16_t command) { hue_set(0.2 * 360); });
+    Input::ir.addListener(0xA15E, [](uint16_t command) { hue_set(0.3 * 360); });
+    Input::ir.addListener(0xF708, [](uint16_t command) { hue_set(0.4 * 360); });
+    Input::ir.addListener(0xE31C, [](uint16_t command) { hue_set(0.5 * 360); });
+    Input::ir.addListener(0xA55A, [](uint16_t command) { hue_set(0.6 * 360); });
+    Input::ir.addListener(0xBD42, [](uint16_t command) { hue_set(0.7 * 360); });
+    Input::ir.addListener(0xAD52, [](uint16_t command) { hue_set(0.8 * 360); });
+    Input::ir.addListener(0xB54A, [](uint16_t command) { hue_set(0.9 * 360); });
+
     new ADCSampler(PIN_MIC_OUT, handle_mic);
   } else {
     mode = CONFIG_MODE;
@@ -200,6 +223,7 @@ extern "C" void app_main(void) {
   }
 
   Input::button.addListener(PIN_SELECT_ABORT, change_device_mode_and_restart);
+  Input::ir.addListener(0xB847, change_device_mode_and_restart);
 
   Input::start();
 }

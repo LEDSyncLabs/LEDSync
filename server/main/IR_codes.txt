@@ -1,0 +1,15 @@
+0 E916
+1 F30C
+2 E718
+3 A15E
+4 F708
+5 E31C
+6 A55A
+7 BD42
+8 AD52
+9 B54A
+menu B847
+left F807
+right F609
+
+power BA45
