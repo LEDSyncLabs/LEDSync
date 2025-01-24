@@ -1,23 +1,28 @@
 #pragma once
 
+#include "driver/gpio.h"
+#include <functional>
 #include <string>
 #include <vector>
-#include <functional>
 
 class Menu {
 public:
-   using Callback = std::function<void()>;
+  using Callback = std::function<void()>;
 
-   Menu();
-   static void drawDeviceInfoWindow();
-   static void drawWifiInfoWindow();
+  Menu(gpio_num_t left, gpio_num_t right);
+  static void drawDeviceInfoWindow();
+  void changeScreen(int direction);
+  static void drawWifiInfoWindow();
+  static void updateScreenTaskWrapper(void *param);
+
 private:
-   int screenIndex = 0;   
+  int screenIndex = 0;
+  int counter = 0;
 
-   void changeScreen(int direction);
+  void updateScreenTask(void);
 
-   std::vector<Callback> listeners = {
-      drawDeviceInfoWindow,
+  std::vector<Callback> listeners = {
       drawWifiInfoWindow,
-   };
+      drawDeviceInfoWindow,
+  };
 };

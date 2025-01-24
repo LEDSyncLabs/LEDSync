@@ -1,3 +1,4 @@
+#include "device_registerer/device_registerer.h"
 #include "driver/adc.h"
 #include "driver/gpio.h"
 #include "driver/i2s.h"
@@ -7,6 +8,7 @@
 #include "gatt_server/gatt_server.h"
 #include "http_server/http_server.h"
 #include "input/input.hpp"
+#include "lcd/lcd.h"
 #include "menu/menu.h"
 #include "mic/ADCSampler.h"
 #include "nvs.h"
@@ -144,7 +146,23 @@ extern "C" void app_main(void) {
   }
 
   if (mode == NORMAL_MODE && ssid != "" && password != "") {
+    new Menu(PIN_ENCODER_LEFT, PIN_ENCODER_RIGHT);
+
     WifiManager::STA::start();
+    DeviceRegisterer::tryRegister();
+
+    PersistentStorage storage("MQTT");
+    while (true) {
+      vTaskDelay(250 / portTICK_PERIOD_MS);
+
+      std::string deviceName = storage.getValue("deviceName");
+      std::string secretKey = storage.getValue("secretKey");
+      std::string accessToken = storage.getValue("accessToken");
+
+      if (deviceName != "" && secretKey != "" && accessToken != "") {
+        break;
+      }
+    }
 
     start_gatt_server();
 
@@ -158,7 +176,6 @@ extern "C" void app_main(void) {
     mode = CONFIG_MODE;
     storage.saveValue("mode", mode);
 
-    WifiManager::AP::save_ssid("LEDSync Setup");
     WifiManager::AP::start();
     HttpServer *httpServer = new HttpServer();
   }

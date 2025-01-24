@@ -1,65 +1,104 @@
 #include "menu/menu.h"
-#include "lcd/lcd.h"
-#include <iostream>
-#include "persistent_storage/persistent_storage.h" 
-#include "wifi/wifi_manager.h"
 #include "input/input.hpp"
+#include "lcd/lcd.h"
 #include "menu.h"
+#include "persistent_storage/persistent_storage.h"
+#include "wifi/wifi_manager.h"
+#include <iostream>
 
+Menu::Menu(gpio_num_t left, gpio_num_t right) {
 
-#define SCREEN_PIN_LEFT GPIO_NUM_21
-#define SCREEN_PIN_RIGHT GPIO_NUM_22
+  lcd_init();
 
+  xTaskCreate(updateScreenTaskWrapper,
+              "Update Screen Task", // Task name
+              4096,                 // Stack size
+              this,                 // Task parameters
+              1,                    // Task priority
+              nullptr               // Task handle
+  );
 
-Menu::Menu() {
-  drawWifiInfoWindow();  
-
- 
-   
-  Input::encoder.addListener(SCREEN_PIN_LEFT, SCREEN_PIN_RIGHT, std::bind(&Menu::changeScreen, this, std::placeholders::_1));  
-
-  Input::start();
-
+  Input::encoder.addListener(
+      left, right, std::bind(&Menu::changeScreen, this, std::placeholders::_1));
 }
 
 void Menu::drawDeviceInfoWindow() {
-   PersistentStorage storage("MQTT");
+  PersistentStorage storage("MQTT");
 
-   std::string deviceName = storage.getValue("deviceName");
-   std::string secretKey = storage.getValue("secretKey");
+  std::string deviceName = storage.getValue("deviceName");
+  std::string secretKey = storage.getValue("secretKey");
 
-   if(deviceName == "" || secretKey == "") {
-      lcd_display_clear(LCD_COLOR_BLACK);
-      lcd_draw_text(6, 6, "Connect to internet", LCD_COLOR_WHITE);
-      lcd_draw_text(6, 26, "to get device info", LCD_COLOR_WHITE);
+  if (deviceName == "" || secretKey == "") {
+    lcd_display_clear(LCD_COLOR_BLACK);
+    lcd_draw_text(6, 6, "Connect to internet", LCD_COLOR_WHITE);
+    lcd_draw_text(6, 26, "to get device info", LCD_COLOR_WHITE);
 
-      lcd_display_update();
+    lcd_display_update();
 
-      return;
-   }
+    return;
+  }
 
-   lcd_display_clear(LCD_COLOR_BLACK);
-   lcd_draw_text(6, 6, "Device Info", LCD_COLOR_WHITE);
-   lcd_draw_text(6, 26, const_cast<char*>(("Device name: " + deviceName).c_str()), LCD_COLOR_WHITE);
-   lcd_draw_text(6, 46, const_cast<char*>(("Secret key: " + secretKey).c_str()), LCD_COLOR_WHITE);
+  lcd_display_clear(LCD_COLOR_BLACK);
+  lcd_draw_text(6, 6, "Device Info", LCD_COLOR_WHITE);
+  lcd_draw_text(6, 26, const_cast<char *>(("Name: " + deviceName).c_str()),
+                LCD_COLOR_WHITE);
+  lcd_draw_text(6, 46, const_cast<char *>(("Key: " + secretKey).c_str()),
+                LCD_COLOR_WHITE);
 
-   lcd_display_update();
+  lcd_display_update();
 }
 
 void Menu::drawWifiInfoWindow() {
-   std::string ssid;
-   WifiManager::AP::load_ssid(ssid);
-  
-   lcd_display_clear(LCD_COLOR_BLACK);
-   lcd_draw_text(6, 6, "WiFi Info", LCD_COLOR_WHITE);
-   lcd_draw_text(6, 26, const_cast<char*>(("SSID: " + ssid).c_str()), LCD_COLOR_WHITE);
+  std::string ssid;
+  WifiManager::AP::load_ssid(ssid);
 
-   lcd_display_update();
+  lcd_display_clear(LCD_COLOR_BLACK);
+
+  if (WifiManager::AP::is_started()) {
+    lcd_draw_text(6, 6, "AP Info", LCD_COLOR_WHITE);
+    lcd_draw_text(6, 26, const_cast<char *>(("SSID: " + ssid).c_str()),
+                  LCD_COLOR_WHITE);
+    lcd_draw_text(6, 56, "IP: 192.168.4.1", LCD_COLOR_WHITE);
+  } else {
+    std::string ssid, pass;
+    WifiManager::STA::load_credentials(ssid, pass);
+
+    lcd_draw_text(6, 6, "Wifi Info", LCD_COLOR_WHITE);
+    lcd_draw_text(6, 26, const_cast<char *>(("SSID: " + ssid).c_str()),
+                  LCD_COLOR_WHITE);
+    if (WifiManager::STA::is_connected()) {
+      lcd_draw_text(6, 56, "Connected", LCD_COLOR_BLUE);
+    } else {
+      lcd_draw_text(6, 56, "Connecting", LCD_COLOR_CYAN);
+    }
+  }
+
+  lcd_display_update();
 }
 
 void Menu::changeScreen(int direction) {
-   screenIndex += direction;
+  ESP_LOGI("menu", "change");
+  screenIndex += direction;
 
-   listeners[screenIndex % listeners.size()]();
+  if (counter < 80) {
+    counter = 0;
+  } else {
+    counter = 20;
+  }
+}
 
+void Menu::updateScreenTask() {
+  while (1) {
+    if (--counter <= 0) {
+      listeners[screenIndex % listeners.size()]();
+      counter = 100;
+    }
+
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+}
+
+void Menu::updateScreenTaskWrapper(void *param) {
+  Menu *instance = static_cast<Menu *>(param);
+  instance->updateScreenTask();
 }

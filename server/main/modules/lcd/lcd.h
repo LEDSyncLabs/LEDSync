@@ -23,9 +23,9 @@
 
 #define PIN_LCD_BCKL GPIO_NUM_12
 
-#define DISPLAY_REAL_WIDTH 320
+#define DISPLAY_REAL_WIDTH 318
 #define DISPLAY_REAL_HEIGHT 240
-#define DISPLAY_SCALE 2
+#define DISPLAY_SCALE 3
 
 #define DISPLAY_WIDTH DISPLAY_REAL_WIDTH / DISPLAY_SCALE
 #define DISPLAY_HEIGHT DISPLAY_REAL_HEIGHT / DISPLAY_SCALE
@@ -33,7 +33,7 @@
 // To speed up transfers, every SPI transfer sends a bunch of lines. This define
 // specifies how many. More means more memory use, but less overhead for setting
 // up / finishing transfers. Make sure 240 is dividable by this.
-#define PARALLEL_LINES 16
+#define PARALLEL_LINES 9
 
 // Function prototypes
 void lcd_init(void);
