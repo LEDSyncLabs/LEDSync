@@ -14,10 +14,12 @@ public:
   void changeScreen(int direction);
   static void drawWifiInfoWindow();
   static void updateScreenTaskWrapper(void *param);
+  static bool draw;
 
 private:
   int screenIndex = 0;
   int counter = 0;
+  bool draw2;
 
   void updateScreenTask(void);
 

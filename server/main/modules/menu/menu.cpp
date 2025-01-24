@@ -6,7 +6,10 @@
 #include "wifi/wifi_manager.h"
 #include <iostream>
 
+bool Menu::draw = true;
+
 Menu::Menu(gpio_num_t left, gpio_num_t right) {
+  draw2 = true;
 
   lcd_init();
 
@@ -98,7 +101,16 @@ void Menu::changeScreen(int direction) {
 void Menu::updateScreenTask() {
   while (1) {
     if (--counter <= 0) {
-      listeners[screenIndex % listeners.size()]();
+      if (draw) {
+        draw2 = true;
+        listeners[screenIndex % listeners.size()]();
+      } else {
+        if (draw2 == true) {
+          draw2 = false;
+          lcd_display_clear(LCD_COLOR_BLACK);
+          lcd_display_update();
+        }
+      }
       counter = 100;
     }
 

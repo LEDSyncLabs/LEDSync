@@ -40,7 +40,7 @@ void IR::start() {
   }
 
   gpio_evt_queue = xQueueCreate(10, sizeof(rmt_rx_done_event_data_t));
-  xTaskCreate(ir_task, "ir_task", 2048, this, 10, NULL);
+  xTaskCreate(ir_task, "ir_task", 4096, this, 10, NULL);
 
   rmt_rx_channel_config_t rx_channel_cfg = {
       .gpio_num = EXAMPLE_IR_RX_GPIO_NUM,
@@ -167,7 +167,7 @@ void IR::parse_nec_frame(rmt_symbol_word_t *rmt_nec_symbols,
   if (symbol_num == 34) {
     frame_parsed = nec_parse_frame(rmt_nec_symbols);
   } else if (symbol_num == 2) {
-    frame_parsed = nec_parse_frame_repeat(rmt_nec_symbols);
+    // frame_parsed = nec_parse_frame_repeat(rmt_nec_symbols);
   }
 
 #ifdef DEBUG_FRAME

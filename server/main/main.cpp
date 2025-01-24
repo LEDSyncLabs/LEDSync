@@ -113,6 +113,8 @@ void add_volume_sample(uint8_t level) {
 
 ADCSampler *adcSampler = NULL;
 
+bool turn_off = false;
+
 void handle_mic(int16_t *samples, int count) {
   int16_t min = INT16_MAX, max = INT16_MIN;
 
@@ -134,7 +136,12 @@ void handle_mic(int16_t *samples, int count) {
 
   // ESP_LOGI(TAG_MAIN, "min:%d max:%d diff:%d level:%hu", min, max, diff,
   // level);
-  gatts_indicate_brightness(level);
+  if (turn_off == true) {
+    gatts_indicate_brightness(0);
+  } else {
+    gatts_indicate_brightness(level);
+  }
+
   add_volume_sample(level);
 }
 
@@ -214,6 +221,11 @@ extern "C" void app_main(void) {
     Input::ir.addListener(0xBD42, [](uint16_t command) { hue_set(0.7 * 360); });
     Input::ir.addListener(0xAD52, [](uint16_t command) { hue_set(0.8 * 360); });
     Input::ir.addListener(0xB54A, [](uint16_t command) { hue_set(0.9 * 360); });
+
+    Input::ir.addListener(0xBA45, [](uint16_t command) {
+      turn_off = !turn_off;
+      Menu::draw = !turn_off;
+    });
 
     new ADCSampler(PIN_MIC_OUT, handle_mic);
 
